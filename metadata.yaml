@@ -1,0 +1,8 @@
+service:
+  full_name: Amazon FSx
+  short_name: FSx
+  link: https://aws.amazon.com/fsx/
+  documentation: https://docs.aws.amazon.com/fsx/
+api_versions:
+  - api_version: v1alpha1
+    status: available

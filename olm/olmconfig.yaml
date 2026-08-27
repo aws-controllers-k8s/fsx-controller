@@ -47,5 +47,5 @@ maintainers:
 - name: "fsx maintainer team"
   email: "ack-maintainers@amazon.com"
 links:
-- name: Amazon FSx Developer Resources
-  url: https://aws.amazon.com/fsx/resources/
+- name: Amazon FSx
+  url: https://aws.amazon.com/fsx/

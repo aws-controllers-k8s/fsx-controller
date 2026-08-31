@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ack-fsx-controller-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ack-fsx-controller
+subjects:
+- kind: ServiceAccount
+  name: ack-fsx-controller
+  namespace: ack-system

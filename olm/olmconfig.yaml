@@ -1,0 +1,51 @@
+---
+annotations:
+  capabilityLevel: Basic Install
+  shortDescription: AWS FSx controller is a service controller for managing FSx
+    resources in Kubernetes
+displayName: AWS Controllers for Kubernetes - Amazon FSx
+description: |-
+  Manage Amazon FSx resources in AWS from within your Kubernetes cluster.
+
+
+  **About Amazon FSx**
+
+
+  Amazon FSx makes it easy and cost effective to launch, run, and scale
+  feature-rich, high-performance file systems in the cloud. It supports a wide
+  range of workloads with fully managed file storage built on the most popular
+  file systems: Amazon FSx for NetApp ONTAP, Amazon FSx for OpenZFS, Amazon FSx
+  for Windows File Server, and Amazon FSx for Lustre.
+
+
+  With Amazon FSx you can manage file systems, backups, snapshots, volumes,
+  storage virtual machines, and data repository associations without having to
+  provision, patch, or maintain the underlying file storage infrastructure.
+
+
+  **About the AWS Controllers for Kubernetes**
+
+
+  This controller is a component of the [AWS Controller for Kubernetes](https://github.com/aws/aws-controllers-k8s)
+  project.
+
+
+  **Pre-Installation Steps**
+
+
+  Please follow the following link: [Red Hat OpenShift](https://aws-controllers-k8s.github.io/community/docs/user-docs/openshift/)
+samples:
+- kind: FileSystem
+  spec: '{}'
+- kind: Backup
+  spec: '{}'
+- kind: Volume
+  spec: '{}'
+- kind: StorageVirtualMachine
+  spec: '{}'
+maintainers:
+- name: "fsx maintainer team"
+  email: "ack-maintainers@amazon.com"
+links:
+- name: Amazon FSx
+  url: https://aws.amazon.com/fsx/

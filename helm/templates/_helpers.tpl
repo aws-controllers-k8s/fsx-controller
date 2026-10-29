@@ -72,6 +72,8 @@ rules:
 - apiGroups:
   - ec2.services.k8s.aws
   resources:
+  - routetables
+  - routetables/status
   - securitygroups
   - securitygroups/status
   - subnets

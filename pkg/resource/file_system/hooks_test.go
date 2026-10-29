@@ -45,13 +45,13 @@ func deltaAt(paths ...string) *ackcompare.Delta {
 }
 
 // newResource wraps a FileSystemSpec in the package's resource type, giving it
-// a Status.FileSystemID so newUpdateRequestPayload has an ID to send.
+// a Status.ID so newUpdateRequestPayload has an ID to send.
 func newResource(spec svcapitypes.FileSystemSpec) *resource {
 	return &resource{
 		ko: &svcapitypes.FileSystem{
 			Spec: spec,
 			Status: svcapitypes.FileSystemStatus{
-				FileSystemID: aws.String("fs-0123456789abcdef0"),
+				ID: aws.String("fs-0123456789abcdef0"),
 			},
 		},
 	}
@@ -225,7 +225,7 @@ func TestInt32Converter(t *testing.T) {
 	t.Run("terminal error surfaces from newUpdateRequestPayload", func(t *testing.T) {
 		rm := &resourceManager{}
 		desired := newResource(svcapitypes.FileSystemSpec{
-			FileSystemType:  aws.String("LUSTRE"),
+			Type:            aws.String("LUSTRE"),
 			StorageCapacity: aws.Int64(math.MaxInt32 + 1),
 		})
 		input, err := rm.newUpdateRequestPayload(
@@ -247,7 +247,7 @@ func TestNewUpdateRequestPayload(t *testing.T) {
 
 	t.Run("lustre", func(t *testing.T) {
 		desired := newResource(svcapitypes.FileSystemSpec{
-			FileSystemType: aws.String("LUSTRE"),
+			Type: aws.String("LUSTRE"),
 			LustreConfiguration: &svcapitypes.CreateFileSystemLustreConfiguration{
 				WeeklyMaintenanceStartTime: aws.String("4:05:30"),
 			},
@@ -279,14 +279,14 @@ func TestNewUpdateRequestPayload(t *testing.T) {
 
 	t.Run("ontap translates RouteTableIDs into Add/Remove", func(t *testing.T) {
 		desired := newResource(svcapitypes.FileSystemSpec{
-			FileSystemType: aws.String("ONTAP"),
+			Type: aws.String("ONTAP"),
 			OntapConfiguration: &svcapitypes.CreateFileSystemOntapConfiguration{
 				RouteTableIDs:      []*string{aws.String("rtb-1"), aws.String("rtb-3")},
 				ThroughputCapacity: aws.Int64(256),
 			},
 		})
 		latest := newResource(svcapitypes.FileSystemSpec{
-			FileSystemType: aws.String("ONTAP"),
+			Type: aws.String("ONTAP"),
 			OntapConfiguration: &svcapitypes.CreateFileSystemOntapConfiguration{
 				RouteTableIDs:      []*string{aws.String("rtb-1"), aws.String("rtb-2")},
 				ThroughputCapacity: aws.Int64(128),
@@ -318,7 +318,7 @@ func TestNewUpdateRequestPayload(t *testing.T) {
 
 	t.Run("openzfs", func(t *testing.T) {
 		desired := newResource(svcapitypes.FileSystemSpec{
-			FileSystemType: aws.String("OPENZFS"),
+			Type: aws.String("OPENZFS"),
 			OpenZFSConfiguration: &svcapitypes.CreateFileSystemOpenZFSConfiguration{
 				CopyTagsToVolumes: aws.Bool(true),
 			},
@@ -344,7 +344,7 @@ func TestNewUpdateRequestPayload(t *testing.T) {
 
 	t.Run("windows", func(t *testing.T) {
 		desired := newResource(svcapitypes.FileSystemSpec{
-			FileSystemType: aws.String("WINDOWS"),
+			Type: aws.String("WINDOWS"),
 			WindowsConfiguration: &svcapitypes.CreateFileSystemWindowsConfiguration{
 				AutomaticBackupRetentionDays: aws.Int64(7),
 			},
@@ -370,17 +370,17 @@ func TestNewUpdateRequestPayload(t *testing.T) {
 
 	t.Run("top-level members", func(t *testing.T) {
 		desired := newResource(svcapitypes.FileSystemSpec{
-			FileSystemType:        aws.String("LUSTRE"),
-			StorageCapacity:       aws.Int64(2400),
-			StorageType:           aws.String("SSD"),
-			FileSystemTypeVersion: aws.String("2.15"),
-			NetworkType:           aws.String("DUAL"),
+			Type:            aws.String("LUSTRE"),
+			StorageCapacity: aws.Int64(2400),
+			StorageType:     aws.String("SSD"),
+			TypeVersion:     aws.String("2.15"),
+			NetworkType:     aws.String("DUAL"),
 		})
 		input, err := rm.newUpdateRequestPayload(
 			ctx, desired, desired,
 			deltaAt(
 				"Spec.StorageCapacity", "Spec.StorageType",
-				"Spec.FileSystemTypeVersion", "Spec.NetworkType",
+				"Spec.TypeVersion", "Spec.NetworkType",
 			),
 		)
 		if err != nil {
@@ -405,7 +405,7 @@ func TestNewUpdateRequestPayload(t *testing.T) {
 
 	t.Run("delta with nothing UpdateFileSystem can act on yields (nil, nil)", func(t *testing.T) {
 		desired := newResource(svcapitypes.FileSystemSpec{
-			FileSystemType: aws.String("LUSTRE"),
+			Type: aws.String("LUSTRE"),
 			LustreConfiguration: &svcapitypes.CreateFileSystemLustreConfiguration{
 				WeeklyMaintenanceStartTime: aws.String("4:05:30"),
 			},
@@ -437,7 +437,7 @@ func TestNewUpdateRequestPayload(t *testing.T) {
 			{
 				name: "lustre numeric members cleared",
 				spec: svcapitypes.FileSystemSpec{
-					FileSystemType:      aws.String("LUSTRE"),
+					Type:                aws.String("LUSTRE"),
 					LustreConfiguration: &svcapitypes.CreateFileSystemLustreConfiguration{},
 				},
 				paths: []string{
@@ -449,7 +449,7 @@ func TestNewUpdateRequestPayload(t *testing.T) {
 			{
 				name: "ontap numeric members cleared",
 				spec: svcapitypes.FileSystemSpec{
-					FileSystemType:     aws.String("ONTAP"),
+					Type:               aws.String("ONTAP"),
 					OntapConfiguration: &svcapitypes.CreateFileSystemOntapConfiguration{},
 				},
 				paths: []string{
@@ -462,7 +462,7 @@ func TestNewUpdateRequestPayload(t *testing.T) {
 			{
 				name: "openzfs numeric and boolean members cleared",
 				spec: svcapitypes.FileSystemSpec{
-					FileSystemType:       aws.String("OPENZFS"),
+					Type:                 aws.String("OPENZFS"),
 					OpenZFSConfiguration: &svcapitypes.CreateFileSystemOpenZFSConfiguration{},
 				},
 				paths: []string{
@@ -475,7 +475,7 @@ func TestNewUpdateRequestPayload(t *testing.T) {
 			{
 				name: "windows numeric members cleared",
 				spec: svcapitypes.FileSystemSpec{
-					FileSystemType:       aws.String("WINDOWS"),
+					Type:                 aws.String("WINDOWS"),
 					WindowsConfiguration: &svcapitypes.CreateFileSystemWindowsConfiguration{},
 				},
 				paths: []string{
@@ -486,7 +486,7 @@ func TestNewUpdateRequestPayload(t *testing.T) {
 			{
 				name: "top-level StorageCapacity cleared",
 				spec: svcapitypes.FileSystemSpec{
-					FileSystemType: aws.String("LUSTRE"),
+					Type: aws.String("LUSTRE"),
 				},
 				paths: []string{"Spec.StorageCapacity"},
 			},
@@ -514,7 +514,7 @@ func TestNewUpdateRequestPayload(t *testing.T) {
 // replaced with an empty map, so the "annotation absent" cases exercise the
 // same nil path the runtime produces for a CR with no annotations at all.
 func newAnnotatedResource(fileSystemType *string, annotations map[string]string) *resource {
-	r := newResource(svcapitypes.FileSystemSpec{FileSystemType: fileSystemType})
+	r := newResource(svcapitypes.FileSystemSpec{Type: fileSystemType})
 	r.ko.ObjectMeta.Annotations = annotations
 	return r
 }
@@ -732,7 +732,7 @@ func TestRestoreLeavesMutableADFieldsComparable(t *testing.T) {
 
 	smad := func(domain string, ref *ackv1alpha1.SecretKeyReference) svcapitypes.FileSystemSpec {
 		return svcapitypes.FileSystemSpec{
-			FileSystemType: aws.String("WINDOWS"),
+			Type: aws.String("WINDOWS"),
 			WindowsConfiguration: &svcapitypes.CreateFileSystemWindowsConfiguration{
 				SelfManagedActiveDirectoryConfiguration: &svcapitypes.SelfManagedActiveDirectoryConfiguration{
 					DomainName: aws.String(domain),
@@ -783,7 +783,7 @@ func TestRecoverObservedLustreDataRepository(t *testing.T) {
 			Spec: svcapitypes.FileSystemSpec{
 				LustreConfiguration: &svcapitypes.CreateFileSystemLustreConfiguration{},
 			},
-			Status: svcapitypes.FileSystemStatus{FileSystemID: aws.String(fsID)},
+			Status: svcapitypes.FileSystemStatus{ID: aws.String(fsID)},
 		}
 	}
 
@@ -846,7 +846,7 @@ func TestRecoverObservedLustreDataRepository(t *testing.T) {
 			},
 		})
 		ko := newKO()
-		ko.Status.FileSystemID = aws.String("fs-other")
+		ko.Status.ID = aws.String("fs-other")
 		recoverObservedLustreDataRepository(desired, resp(&svcsdktypes.DataRepositoryConfiguration{
 			ImportPath: aws.String("s3://bucket/observed"),
 		}), ko)
@@ -866,7 +866,7 @@ func TestRecoverObservedLustreDataRepository(t *testing.T) {
 // the CR.
 func TestRestoreLustreDataRepositoryFields(t *testing.T) {
 	desired := newResource(svcapitypes.FileSystemSpec{
-		FileSystemType: aws.String("LUSTRE"),
+		Type: aws.String("LUSTRE"),
 		LustreConfiguration: &svcapitypes.CreateFileSystemLustreConfiguration{
 			AutoImportPolicy:      aws.String("NEW"),
 			ExportPath:            aws.String("s3://bucket/export"),
@@ -878,7 +878,7 @@ func TestRestoreLustreDataRepositoryFields(t *testing.T) {
 	// members nil.
 	ko := &svcapitypes.FileSystem{
 		Spec: svcapitypes.FileSystemSpec{
-			FileSystemType:      aws.String("LUSTRE"),
+			Type:                aws.String("LUSTRE"),
 			LustreConfiguration: &svcapitypes.CreateFileSystemLustreConfiguration{},
 		},
 	}
@@ -920,13 +920,13 @@ func TestRejectUnexpressibleDelta(t *testing.T) {
 
 	// Latest has a maintenance window; desired removed it.
 	latest := newResource(svcapitypes.FileSystemSpec{
-		FileSystemType: aws.String("LUSTRE"),
+		Type: aws.String("LUSTRE"),
 		LustreConfiguration: &svcapitypes.CreateFileSystemLustreConfiguration{
 			WeeklyMaintenanceStartTime: aws.String("2:03:00"),
 		},
 	})
 	desired := newResource(svcapitypes.FileSystemSpec{
-		FileSystemType:      aws.String("LUSTRE"),
+		Type:                aws.String("LUSTRE"),
 		LustreConfiguration: &svcapitypes.CreateFileSystemLustreConfiguration{},
 	})
 	desired.ko.Status = *latest.ko.Status.DeepCopy()
@@ -964,7 +964,7 @@ func TestRejectUnexpressibleDelta(t *testing.T) {
 		// in a unit test); the point is that the error is that, not the terminal
 		// "cannot apply changes".
 		tagsOnly := newResource(svcapitypes.FileSystemSpec{
-			FileSystemType: aws.String("LUSTRE"),
+			Type: aws.String("LUSTRE"),
 		})
 		tagsOnly.ko.Status = *latest.ko.Status.DeepCopy()
 		_, err := rm.customUpdateFileSystem(ctx, tagsOnly, tagsOnly, deltaAt("Spec.Tags"))
@@ -1002,14 +1002,14 @@ func TestRejectUnexpressibleChangesBeforeSideEffects(t *testing.T) {
 	// latest has both a maintenance window and a storage capacity; desired keeps
 	// a larger capacity but drops the window.
 	latest := newResource(svcapitypes.FileSystemSpec{
-		FileSystemType:  aws.String("LUSTRE"),
+		Type:            aws.String("LUSTRE"),
 		StorageCapacity: aws.Int64(1200),
 		LustreConfiguration: &svcapitypes.CreateFileSystemLustreConfiguration{
 			WeeklyMaintenanceStartTime: aws.String("2:03:00"),
 		},
 	})
 	desired := newResource(svcapitypes.FileSystemSpec{
-		FileSystemType:      aws.String("LUSTRE"),
+		Type:                aws.String("LUSTRE"),
 		StorageCapacity:     aws.Int64(2400),
 		LustreConfiguration: &svcapitypes.CreateFileSystemLustreConfiguration{},
 	})
@@ -1077,7 +1077,7 @@ func TestRejectUnexpressibleChangesBeforeSideEffects(t *testing.T) {
 
 	t.Run("a fully supported delta passes preflight", func(t *testing.T) {
 		ok := newResource(svcapitypes.FileSystemSpec{
-			FileSystemType:  aws.String("LUSTRE"),
+			Type:            aws.String("LUSTRE"),
 			StorageCapacity: aws.Int64(2400),
 			LustreConfiguration: &svcapitypes.CreateFileSystemLustreConfiguration{
 				WeeklyMaintenanceStartTime: aws.String("4:05:30"),
@@ -1110,14 +1110,14 @@ func TestPreflightAllowsBuilderSupportedAbsence(t *testing.T) {
 
 	t.Run("remove all ontap route tables", func(t *testing.T) {
 		applied := svcapitypes.FileSystemSpec{
-			FileSystemType: aws.String("ONTAP"),
+			Type: aws.String("ONTAP"),
 			OntapConfiguration: &svcapitypes.CreateFileSystemOntapConfiguration{
 				RouteTableIDs: []*string{aws.String("rtb-1"), aws.String("rtb-2")},
 			},
 		}
 		latest := newResource(applied)
 		desired := newResource(svcapitypes.FileSystemSpec{
-			FileSystemType:     aws.String("ONTAP"),
+			Type:               aws.String("ONTAP"),
 			OntapConfiguration: &svcapitypes.CreateFileSystemOntapConfiguration{},
 		})
 		desired.ko.Status = *latest.ko.Status.DeepCopy()
@@ -1138,14 +1138,14 @@ func TestPreflightAllowsBuilderSupportedAbsence(t *testing.T) {
 
 	t.Run("remove all openzfs route tables", func(t *testing.T) {
 		applied := svcapitypes.FileSystemSpec{
-			FileSystemType: aws.String("OPENZFS"),
+			Type: aws.String("OPENZFS"),
 			OpenZFSConfiguration: &svcapitypes.CreateFileSystemOpenZFSConfiguration{
 				RouteTableIDs: []*string{aws.String("rtb-1")},
 			},
 		}
 		latest := newResource(applied)
 		desired := newResource(svcapitypes.FileSystemSpec{
-			FileSystemType:       aws.String("OPENZFS"),
+			Type:                 aws.String("OPENZFS"),
 			OpenZFSConfiguration: &svcapitypes.CreateFileSystemOpenZFSConfiguration{},
 		})
 		desired.ko.Status = *latest.ko.Status.DeepCopy()
@@ -1158,7 +1158,7 @@ func TestPreflightAllowsBuilderSupportedAbsence(t *testing.T) {
 
 	t.Run("lustre metadata USER_PROVISIONED to AUTOMATIC omits IOPS", func(t *testing.T) {
 		applied := svcapitypes.FileSystemSpec{
-			FileSystemType: aws.String("LUSTRE"),
+			Type: aws.String("LUSTRE"),
 			LustreConfiguration: &svcapitypes.CreateFileSystemLustreConfiguration{
 				MetadataConfiguration: &svcapitypes.CreateFileSystemLustreMetadataConfiguration{
 					Mode: aws.String("USER_PROVISIONED"),
@@ -1169,7 +1169,7 @@ func TestPreflightAllowsBuilderSupportedAbsence(t *testing.T) {
 		latest := newResource(applied)
 		// Mode flips to AUTOMATIC and IOPS must be omitted.
 		desired := newResource(svcapitypes.FileSystemSpec{
-			FileSystemType: aws.String("LUSTRE"),
+			Type: aws.String("LUSTRE"),
 			LustreConfiguration: &svcapitypes.CreateFileSystemLustreConfiguration{
 				MetadataConfiguration: &svcapitypes.CreateFileSystemLustreMetadataConfiguration{
 					Mode: aws.String("AUTOMATIC"),
@@ -1190,7 +1190,7 @@ func TestPreflightAllowsBuilderSupportedAbsence(t *testing.T) {
 
 	t.Run("lustre read cache away from USER_PROVISIONED omits SizeGiB", func(t *testing.T) {
 		applied := svcapitypes.FileSystemSpec{
-			FileSystemType: aws.String("LUSTRE"),
+			Type: aws.String("LUSTRE"),
 			LustreConfiguration: &svcapitypes.CreateFileSystemLustreConfiguration{
 				DataReadCacheConfiguration: &svcapitypes.LustreReadCacheConfiguration{
 					SizingMode: aws.String("USER_PROVISIONED"),
@@ -1200,7 +1200,7 @@ func TestPreflightAllowsBuilderSupportedAbsence(t *testing.T) {
 		}
 		latest := newResource(applied)
 		desired := newResource(svcapitypes.FileSystemSpec{
-			FileSystemType: aws.String("LUSTRE"),
+			Type: aws.String("LUSTRE"),
 			LustreConfiguration: &svcapitypes.CreateFileSystemLustreConfiguration{
 				DataReadCacheConfiguration: &svcapitypes.LustreReadCacheConfiguration{
 					SizingMode: aws.String("NO_CACHE"),
@@ -1330,7 +1330,7 @@ func TestPreflightAllowsExplicitEmptyList(t *testing.T) {
 	ctx := context.Background()
 
 	applied := svcapitypes.FileSystemSpec{
-		FileSystemType: aws.String("LUSTRE"),
+		Type: aws.String("LUSTRE"),
 		LustreConfiguration: &svcapitypes.CreateFileSystemLustreConfiguration{
 			RootSquashConfiguration: &svcapitypes.LustreRootSquashConfiguration{
 				RootSquash:   aws.String("65534:65534"),
@@ -1340,7 +1340,7 @@ func TestPreflightAllowsExplicitEmptyList(t *testing.T) {
 	}
 	latest := newResource(applied)
 	desired := newResource(svcapitypes.FileSystemSpec{
-		FileSystemType: aws.String("LUSTRE"),
+		Type: aws.String("LUSTRE"),
 		LustreConfiguration: &svcapitypes.CreateFileSystemLustreConfiguration{
 			RootSquashConfiguration: &svcapitypes.LustreRootSquashConfiguration{
 				RootSquash: aws.String("65534:65534"),
@@ -1386,7 +1386,7 @@ func TestPreflightLeavesValidationToFSx(t *testing.T) {
 	const path = "Spec.WindowsConfiguration.SelfManagedActiveDirectoryConfiguration.DNSIPs"
 
 	latest := newResource(svcapitypes.FileSystemSpec{
-		FileSystemType: aws.String("WINDOWS"),
+		Type: aws.String("WINDOWS"),
 		WindowsConfiguration: &svcapitypes.CreateFileSystemWindowsConfiguration{
 			SelfManagedActiveDirectoryConfiguration: &svcapitypes.SelfManagedActiveDirectoryConfiguration{
 				DNSIPs: []*string{aws.String("10.0.0.1")},
@@ -1394,7 +1394,7 @@ func TestPreflightLeavesValidationToFSx(t *testing.T) {
 		},
 	})
 	desired := newResource(svcapitypes.FileSystemSpec{
-		FileSystemType: aws.String("WINDOWS"),
+		Type: aws.String("WINDOWS"),
 		WindowsConfiguration: &svcapitypes.CreateFileSystemWindowsConfiguration{
 			SelfManagedActiveDirectoryConfiguration: &svcapitypes.SelfManagedActiveDirectoryConfiguration{
 				DNSIPs: []*string{},
@@ -1425,7 +1425,7 @@ func TestRejectUncarriedNestedChanges(t *testing.T) {
 			// members, so an omitted OU is retained rather than cleared.
 			name: "self-managed AD organizational unit",
 			applied: svcapitypes.FileSystemSpec{
-				FileSystemType: aws.String("WINDOWS"),
+				Type: aws.String("WINDOWS"),
 				WindowsConfiguration: &svcapitypes.CreateFileSystemWindowsConfiguration{
 					SelfManagedActiveDirectoryConfiguration: &svcapitypes.SelfManagedActiveDirectoryConfiguration{
 						DomainName:                          aws.String("corp.example.com"),
@@ -1435,7 +1435,7 @@ func TestRejectUncarriedNestedChanges(t *testing.T) {
 				},
 			},
 			desired: svcapitypes.FileSystemSpec{
-				FileSystemType: aws.String("WINDOWS"),
+				Type: aws.String("WINDOWS"),
 				WindowsConfiguration: &svcapitypes.CreateFileSystemWindowsConfiguration{
 					SelfManagedActiveDirectoryConfiguration: &svcapitypes.SelfManagedActiveDirectoryConfiguration{
 						DomainName: aws.String("corp.example.com"),
@@ -1451,7 +1451,7 @@ func TestRejectUncarriedNestedChanges(t *testing.T) {
 			// no Smithy required flag records.
 			name: "lustre read cache size while still USER_PROVISIONED",
 			applied: svcapitypes.FileSystemSpec{
-				FileSystemType: aws.String("LUSTRE"),
+				Type: aws.String("LUSTRE"),
 				LustreConfiguration: &svcapitypes.CreateFileSystemLustreConfiguration{
 					DataReadCacheConfiguration: &svcapitypes.LustreReadCacheConfiguration{
 						SizingMode: aws.String("USER_PROVISIONED"),
@@ -1460,7 +1460,7 @@ func TestRejectUncarriedNestedChanges(t *testing.T) {
 				},
 			},
 			desired: svcapitypes.FileSystemSpec{
-				FileSystemType: aws.String("LUSTRE"),
+				Type: aws.String("LUSTRE"),
 				LustreConfiguration: &svcapitypes.CreateFileSystemLustreConfiguration{
 					DataReadCacheConfiguration: &svcapitypes.LustreReadCacheConfiguration{
 						SizingMode: aws.String("USER_PROVISIONED"),
@@ -1472,7 +1472,7 @@ func TestRejectUncarriedNestedChanges(t *testing.T) {
 		{
 			name: "openzfs read cache size while still USER_PROVISIONED",
 			applied: svcapitypes.FileSystemSpec{
-				FileSystemType: aws.String("OPENZFS"),
+				Type: aws.String("OPENZFS"),
 				OpenZFSConfiguration: &svcapitypes.CreateFileSystemOpenZFSConfiguration{
 					ReadCacheConfiguration: &svcapitypes.OpenZFSReadCacheConfiguration{
 						SizingMode: aws.String("USER_PROVISIONED"),
@@ -1481,7 +1481,7 @@ func TestRejectUncarriedNestedChanges(t *testing.T) {
 				},
 			},
 			desired: svcapitypes.FileSystemSpec{
-				FileSystemType: aws.String("OPENZFS"),
+				Type: aws.String("OPENZFS"),
 				OpenZFSConfiguration: &svcapitypes.CreateFileSystemOpenZFSConfiguration{
 					ReadCacheConfiguration: &svcapitypes.OpenZFSReadCacheConfiguration{
 						SizingMode: aws.String("USER_PROVISIONED"),
@@ -1540,7 +1540,7 @@ func TestRejectUncarriedNestedChanges(t *testing.T) {
 	// Changing the OU rather than removing it is carried, so it must pass.
 	t.Run("changing the organizational unit is allowed", func(t *testing.T) {
 		applied := svcapitypes.FileSystemSpec{
-			FileSystemType: aws.String("WINDOWS"),
+			Type: aws.String("WINDOWS"),
 			WindowsConfiguration: &svcapitypes.CreateFileSystemWindowsConfiguration{
 				SelfManagedActiveDirectoryConfiguration: &svcapitypes.SelfManagedActiveDirectoryConfiguration{
 					OrganizationalUnitDistinguishedName: aws.String("OU=old,DC=corp,DC=example,DC=com"),
@@ -1549,7 +1549,7 @@ func TestRejectUncarriedNestedChanges(t *testing.T) {
 		}
 		latest := newResource(applied)
 		desired := newResource(svcapitypes.FileSystemSpec{
-			FileSystemType: aws.String("WINDOWS"),
+			Type: aws.String("WINDOWS"),
 			WindowsConfiguration: &svcapitypes.CreateFileSystemWindowsConfiguration{
 				SelfManagedActiveDirectoryConfiguration: &svcapitypes.SelfManagedActiveDirectoryConfiguration{
 					OrganizationalUnitDistinguishedName: aws.String("OU=new,DC=corp,DC=example,DC=com"),
@@ -1584,7 +1584,7 @@ func TestRejectNestedLeafRemovals(t *testing.T) {
 		{
 			name: "windows audit log level",
 			applied: svcapitypes.FileSystemSpec{
-				FileSystemType: aws.String("WINDOWS"),
+				Type: aws.String("WINDOWS"),
 				WindowsConfiguration: &svcapitypes.CreateFileSystemWindowsConfiguration{
 					AuditLogConfiguration: &svcapitypes.WindowsAuditLogCreateConfiguration{
 						FileAccessAuditLogLevel:      aws.String("SUCCESS_ONLY"),
@@ -1593,7 +1593,7 @@ func TestRejectNestedLeafRemovals(t *testing.T) {
 				},
 			},
 			desired: svcapitypes.FileSystemSpec{
-				FileSystemType: aws.String("WINDOWS"),
+				Type: aws.String("WINDOWS"),
 				WindowsConfiguration: &svcapitypes.CreateFileSystemWindowsConfiguration{
 					AuditLogConfiguration: &svcapitypes.WindowsAuditLogCreateConfiguration{
 						FileShareAccessAuditLogLevel: aws.String("SUCCESS_ONLY"),
@@ -1605,7 +1605,7 @@ func TestRejectNestedLeafRemovals(t *testing.T) {
 		{
 			name: "lustre log configuration level",
 			applied: svcapitypes.FileSystemSpec{
-				FileSystemType: aws.String("LUSTRE"),
+				Type: aws.String("LUSTRE"),
 				LustreConfiguration: &svcapitypes.CreateFileSystemLustreConfiguration{
 					LogConfiguration: &svcapitypes.LustreLogCreateConfiguration{
 						Level:       aws.String("WARN_ERROR"),
@@ -1614,7 +1614,7 @@ func TestRejectNestedLeafRemovals(t *testing.T) {
 				},
 			},
 			desired: svcapitypes.FileSystemSpec{
-				FileSystemType: aws.String("LUSTRE"),
+				Type: aws.String("LUSTRE"),
 				LustreConfiguration: &svcapitypes.CreateFileSystemLustreConfiguration{
 					LogConfiguration: &svcapitypes.LustreLogCreateConfiguration{
 						Destination: aws.String("arn:aws:logs:us-west-2:1234:log-group:/aws/fsx/x"),
@@ -1626,7 +1626,7 @@ func TestRejectNestedLeafRemovals(t *testing.T) {
 		{
 			name: "windows fsrm service enabled",
 			applied: svcapitypes.FileSystemSpec{
-				FileSystemType: aws.String("WINDOWS"),
+				Type: aws.String("WINDOWS"),
 				WindowsConfiguration: &svcapitypes.CreateFileSystemWindowsConfiguration{
 					FsrmConfiguration: &svcapitypes.WindowsFsrmConfiguration{
 						FsrmServiceEnabled:  aws.Bool(true),
@@ -1635,7 +1635,7 @@ func TestRejectNestedLeafRemovals(t *testing.T) {
 				},
 			},
 			desired: svcapitypes.FileSystemSpec{
-				FileSystemType: aws.String("WINDOWS"),
+				Type: aws.String("WINDOWS"),
 				WindowsConfiguration: &svcapitypes.CreateFileSystemWindowsConfiguration{
 					FsrmConfiguration: &svcapitypes.WindowsFsrmConfiguration{
 						EventLogDestination: aws.String("arn:aws:logs:us-west-2:1234:log-group:/aws/fsx/y"),
@@ -1691,7 +1691,7 @@ func TestRejectNestedLeafRemovals(t *testing.T) {
 
 	t.Run("a nested leaf that is still set is not rejected", func(t *testing.T) {
 		spec := svcapitypes.FileSystemSpec{
-			FileSystemType: aws.String("WINDOWS"),
+			Type: aws.String("WINDOWS"),
 			WindowsConfiguration: &svcapitypes.CreateFileSystemWindowsConfiguration{
 				AuditLogConfiguration: &svcapitypes.WindowsAuditLogCreateConfiguration{
 					FileAccessAuditLogLevel:      aws.String("FAILURE_ONLY"),
@@ -1740,7 +1740,7 @@ func TestDeltaPathsOutsideTags(t *testing.T) {
 // which filling that Secret is never detected.
 func TestRejectEmptyResolvedPasswords(t *testing.T) {
 	declared := newResource(svcapitypes.FileSystemSpec{
-		FileSystemType: aws.String("ONTAP"),
+		Type: aws.String("ONTAP"),
 		OntapConfiguration: &svcapitypes.CreateFileSystemOntapConfiguration{
 			FsxAdminPassword: newSecretRef("default", "creds", "password"),
 		},
@@ -1777,7 +1777,7 @@ func TestRejectEmptyResolvedPasswords(t *testing.T) {
 	})
 
 	t.Run("undeclared password is not required", func(t *testing.T) {
-		none := newResource(svcapitypes.FileSystemSpec{FileSystemType: aws.String("LUSTRE")})
+		none := newResource(svcapitypes.FileSystemSpec{Type: aws.String("LUSTRE")})
 		if err := rejectEmptyResolvedPasswords(none, &svcsdk.CreateFileSystemInput{}); err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -1788,7 +1788,7 @@ func TestRejectEmptyResolvedPasswords(t *testing.T) {
 
 	t.Run("self-managed AD password is checked too", func(t *testing.T) {
 		win := newResource(svcapitypes.FileSystemSpec{
-			FileSystemType: aws.String("WINDOWS"),
+			Type: aws.String("WINDOWS"),
 			WindowsConfiguration: &svcapitypes.CreateFileSystemWindowsConfiguration{
 				SelfManagedActiveDirectoryConfiguration: &svcapitypes.SelfManagedActiveDirectoryConfiguration{
 					Password: newSecretRef("default", "ad-creds", "password"),
@@ -1960,7 +1960,7 @@ func TestRecoverObservedWindowsAliases(t *testing.T) {
 	}
 	desiredWith := func(names ...string) *resource {
 		r := newResource(svcapitypes.FileSystemSpec{
-			FileSystemType:       aws.String("WINDOWS"),
+			Type:                 aws.String("WINDOWS"),
 			WindowsConfiguration: &svcapitypes.CreateFileSystemWindowsConfiguration{},
 		})
 		for _, n := range names {
@@ -1972,7 +1972,7 @@ func TestRecoverObservedWindowsAliases(t *testing.T) {
 	// What sdkFind builds: the desired object with the output member dropped.
 	latestFrom := func(desired *resource) *svcapitypes.FileSystem {
 		ko := desired.ko.DeepCopy()
-		ko.Status.FileSystemID = aws.String(fsID)
+		ko.Status.ID = aws.String(fsID)
 		ko.Spec.WindowsConfiguration.Aliases = desired.ko.Spec.WindowsConfiguration.Aliases
 		return ko
 	}
@@ -2045,13 +2045,13 @@ func TestRecoverObservedWindowsAliases(t *testing.T) {
 func TestAliasEditRejectedByPreflight(t *testing.T) {
 	rm := &resourceManager{}
 	desired := newResource(svcapitypes.FileSystemSpec{
-		FileSystemType: aws.String("WINDOWS"),
+		Type: aws.String("WINDOWS"),
 		WindowsConfiguration: &svcapitypes.CreateFileSystemWindowsConfiguration{
 			Aliases: aws.StringSlice([]string{"a.example.com", "b.example.com"}),
 		},
 	})
 	latest := newResource(svcapitypes.FileSystemSpec{
-		FileSystemType: aws.String("WINDOWS"),
+		Type: aws.String("WINDOWS"),
 		WindowsConfiguration: &svcapitypes.CreateFileSystemWindowsConfiguration{
 			Aliases: aws.StringSlice([]string{"a.example.com"}),
 		},

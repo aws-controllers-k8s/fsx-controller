@@ -105,8 +105,8 @@ def lustre_file_system(fsx_client):
 
         cr = k8s.get_resource(ref)
         assert "status" in cr
-        assert "fileSystemID" in cr["status"]
-        file_system_id = cr["status"]["fileSystemID"]
+        assert "id" in cr["status"]
+        file_system_id = cr["status"]["id"]
 
         yield (ref, cr, file_system_id)
     finally:
@@ -116,7 +116,7 @@ def lustre_file_system(fsx_client):
         if k8s.get_resource_exists(ref):
             cr = k8s.get_resource(ref)
             if cr is not None and "status" in cr:
-                file_system_id = cr["status"].get("fileSystemID")
+                file_system_id = cr["status"].get("id")
 
             _, deleted = k8s.delete_custom_resource(
                 ref,
@@ -148,7 +148,7 @@ class TestFileSystem:
         assert cr["status"]["dnsName"] is not None
         assert cr["status"]["vpcID"] is not None
         assert cr["status"]["ackResourceMetadata"]["arn"] is not None
-        assert cr["spec"]["fileSystemType"] == "LUSTRE"
+        assert cr["spec"]["type"] == "LUSTRE"
         assert cr["spec"]["storageCapacity"] == STORAGE_CAPACITY
 
         # Verify via the AWS API.

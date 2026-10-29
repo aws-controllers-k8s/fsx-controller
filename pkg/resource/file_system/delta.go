@@ -42,20 +42,6 @@ func newResourceDelta(
 		return delta
 	}
 
-	if ackcompare.HasNilDifference(a.ko.Spec.FileSystemType, b.ko.Spec.FileSystemType) {
-		delta.Add("Spec.FileSystemType", a.ko.Spec.FileSystemType, b.ko.Spec.FileSystemType)
-	} else if a.ko.Spec.FileSystemType != nil && b.ko.Spec.FileSystemType != nil {
-		if *a.ko.Spec.FileSystemType != *b.ko.Spec.FileSystemType {
-			delta.Add("Spec.FileSystemType", a.ko.Spec.FileSystemType, b.ko.Spec.FileSystemType)
-		}
-	}
-	if ackcompare.HasNilDifference(a.ko.Spec.FileSystemTypeVersion, b.ko.Spec.FileSystemTypeVersion) {
-		delta.Add("Spec.FileSystemTypeVersion", a.ko.Spec.FileSystemTypeVersion, b.ko.Spec.FileSystemTypeVersion)
-	} else if a.ko.Spec.FileSystemTypeVersion != nil && b.ko.Spec.FileSystemTypeVersion != nil {
-		if *a.ko.Spec.FileSystemTypeVersion != *b.ko.Spec.FileSystemTypeVersion {
-			delta.Add("Spec.FileSystemTypeVersion", a.ko.Spec.FileSystemTypeVersion, b.ko.Spec.FileSystemTypeVersion)
-		}
-	}
 	if ackcompare.HasNilDifference(a.ko.Spec.KMSKeyID, b.ko.Spec.KMSKeyID) {
 		delta.Add("Spec.KMSKeyID", a.ko.Spec.KMSKeyID, b.ko.Spec.KMSKeyID)
 	} else if a.ko.Spec.KMSKeyID != nil && b.ko.Spec.KMSKeyID != nil {
@@ -501,6 +487,20 @@ func newResourceDelta(
 	latestACKTags, _ := convertToOrderedACKTags(b.ko.Spec.Tags)
 	if !ackcompare.MapStringStringEqual(desiredACKTags, latestACKTags) {
 		delta.Add("Spec.Tags", a.ko.Spec.Tags, b.ko.Spec.Tags)
+	}
+	if ackcompare.HasNilDifference(a.ko.Spec.Type, b.ko.Spec.Type) {
+		delta.Add("Spec.Type", a.ko.Spec.Type, b.ko.Spec.Type)
+	} else if a.ko.Spec.Type != nil && b.ko.Spec.Type != nil {
+		if *a.ko.Spec.Type != *b.ko.Spec.Type {
+			delta.Add("Spec.Type", a.ko.Spec.Type, b.ko.Spec.Type)
+		}
+	}
+	if ackcompare.HasNilDifference(a.ko.Spec.TypeVersion, b.ko.Spec.TypeVersion) {
+		delta.Add("Spec.TypeVersion", a.ko.Spec.TypeVersion, b.ko.Spec.TypeVersion)
+	} else if a.ko.Spec.TypeVersion != nil && b.ko.Spec.TypeVersion != nil {
+		if *a.ko.Spec.TypeVersion != *b.ko.Spec.TypeVersion {
+			delta.Add("Spec.TypeVersion", a.ko.Spec.TypeVersion, b.ko.Spec.TypeVersion)
+		}
 	}
 	if ackcompare.HasNilDifference(a.ko.Spec.WindowsConfiguration, b.ko.Spec.WindowsConfiguration) {
 		delta.Add("Spec.WindowsConfiguration", a.ko.Spec.WindowsConfiguration, b.ko.Spec.WindowsConfiguration)

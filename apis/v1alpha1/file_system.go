@@ -25,33 +25,6 @@ import (
 // A description of a specific Amazon FSx file system.
 type FileSystemSpec struct {
 
-	// The type of Amazon FSx file system to create. Valid values are WINDOWS, LUSTRE,
-	// ONTAP, and OPENZFS.
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
-	// +kubebuilder:validation:Required
-	FileSystemType *string `json:"fileSystemType"`
-	// For FSx for Lustre file systems, sets the Lustre version for the file system
-	// that you're creating. Valid values are 2.10, 2.12, and 2.15:
-	//
-	//    * 2.10 is supported by the Scratch and Persistent_1 Lustre deployment
-	//    types.
-	//
-	//    * 2.12 is supported by all Lustre deployment types, except for PERSISTENT_2
-	//    with a metadata configuration mode.
-	//
-	//    * 2.15 is supported by all Lustre deployment types and is recommended
-	//    for all new file systems.
-	//
-	// Default value is 2.10, except for the following deployments:
-	//
-	//    * Default value is 2.12 when DeploymentType is set to PERSISTENT_2 without
-	//    a metadata configuration mode.
-	//
-	//    * Default value is 2.15 when DeploymentType is set to PERSISTENT_2 with
-	//    a metadata configuration mode.
-	//
-	// Regex Pattern: `^[0-9](.[0-9]*)*$`
-	FileSystemTypeVersion *string `json:"fileSystemTypeVersion,omitempty"`
 	// Regex Pattern: `^.{1,2048}$`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
 	KMSKeyID            *string                                  `json:"kmsKeyID,omitempty"`
@@ -149,6 +122,33 @@ type FileSystemSpec struct {
 	// The tags to apply to the file system that's being created. The key value
 	// of the Name tag appears in the console as the file system name.
 	Tags []*Tag `json:"tags,omitempty"`
+	// The type of Amazon FSx file system to create. Valid values are WINDOWS, LUSTRE,
+	// ONTAP, and OPENZFS.
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
+	// +kubebuilder:validation:Required
+	Type *string `json:"type"`
+	// For FSx for Lustre file systems, sets the Lustre version for the file system
+	// that you're creating. Valid values are 2.10, 2.12, and 2.15:
+	//
+	//    * 2.10 is supported by the Scratch and Persistent_1 Lustre deployment
+	//    types.
+	//
+	//    * 2.12 is supported by all Lustre deployment types, except for PERSISTENT_2
+	//    with a metadata configuration mode.
+	//
+	//    * 2.15 is supported by all Lustre deployment types and is recommended
+	//    for all new file systems.
+	//
+	// Default value is 2.10, except for the following deployments:
+	//
+	//    * Default value is 2.12 when DeploymentType is set to PERSISTENT_2 without
+	//    a metadata configuration mode.
+	//
+	//    * Default value is 2.15 when DeploymentType is set to PERSISTENT_2 with
+	//    a metadata configuration mode.
+	//
+	// Regex Pattern: `^[0-9](.[0-9]*)*$`
+	TypeVersion *string `json:"typeVersion,omitempty"`
 	// The Microsoft Windows configuration for the file system that's being created.
 	WindowsConfiguration *CreateFileSystemWindowsConfiguration `json:"windowsConfiguration,omitempty"`
 }
@@ -181,7 +181,7 @@ type FileSystemStatus struct {
 	//
 	// Regex Pattern: `^(fs-[0-9a-f]{8,})$`
 	// +kubebuilder:validation:Optional
-	FileSystemID *string `json:"fileSystemID,omitempty"`
+	ID *string `json:"id,omitempty"`
 	// The lifecycle status of the file system. The following are the possible values
 	// and what they mean:
 	//

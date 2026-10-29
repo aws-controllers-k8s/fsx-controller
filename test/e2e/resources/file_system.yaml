@@ -3,7 +3,7 @@ kind: FileSystem
 metadata:
   name: $FILE_SYSTEM_NAME
 spec:
-  fileSystemType: LUSTRE
+  type: LUSTRE
   storageCapacity: $STORAGE_CAPACITY
   storageType: SSD
   subnetIDs:

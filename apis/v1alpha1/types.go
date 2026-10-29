@@ -265,8 +265,12 @@ type CreateFileSystemOntapConfiguration struct {
 	// private cloud (VPC). For more information, see VPC and subnets (https://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_Subnets.html)
 	// in the Amazon VPC User Guide.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
-	PreferredSubnetID *string   `json:"preferredSubnetID,omitempty"`
-	RouteTableIDs     []*string `json:"routeTableIDs,omitempty"`
+	PreferredSubnetID *string `json:"preferredSubnetID,omitempty"`
+	// Reference field for PreferredSubnetID
+	PreferredSubnetRef *ackv1alpha1.AWSResourceReferenceWrapper `json:"preferredSubnetRef,omitempty"`
+	RouteTableIDs      []*string                                `json:"routeTableIDs,omitempty"`
+	// Reference field for RouteTableIDs
+	RouteTableRefs []*ackv1alpha1.AWSResourceReferenceWrapper `json:"routeTableRefs,omitempty"`
 	// The sustained throughput of an Amazon FSx file system in Megabytes per second
 	// (MBps).
 	ThroughputCapacity          *int64 `json:"throughputCapacity,omitempty"`
@@ -309,6 +313,8 @@ type CreateFileSystemOpenZFSConfiguration struct {
 	// in the Amazon VPC User Guide.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
 	PreferredSubnetID *string `json:"preferredSubnetID,omitempty"`
+	// Reference field for PreferredSubnetID
+	PreferredSubnetRef *ackv1alpha1.AWSResourceReferenceWrapper `json:"preferredSubnetRef,omitempty"`
 	// The configuration for the optional provisioned SSD read cache on Amazon FSx
 	// for OpenZFS file systems that use the Intelligent-Tiering storage class.
 	ReadCacheConfiguration *OpenZFSReadCacheConfiguration `json:"readCacheConfiguration,omitempty"`
@@ -316,6 +322,8 @@ type CreateFileSystemOpenZFSConfiguration struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
 	RootVolumeConfiguration *OpenZFSCreateRootVolumeConfiguration `json:"rootVolumeConfiguration,omitempty"`
 	RouteTableIDs           []*string                             `json:"routeTableIDs,omitempty"`
+	// Reference field for RouteTableIDs
+	RouteTableRefs []*ackv1alpha1.AWSResourceReferenceWrapper `json:"routeTableRefs,omitempty"`
 	// The sustained throughput of an Amazon FSx file system in Megabytes per second
 	// (MBps).
 	ThroughputCapacity *int64 `json:"throughputCapacity,omitempty"`
@@ -366,6 +374,8 @@ type CreateFileSystemWindowsConfiguration struct {
 	// in the Amazon VPC User Guide.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
 	PreferredSubnetID *string `json:"preferredSubnetID,omitempty"`
+	// Reference field for PreferredSubnetID
+	PreferredSubnetRef *ackv1alpha1.AWSResourceReferenceWrapper `json:"preferredSubnetRef,omitempty"`
 	// The configuration that Amazon FSx uses to join a FSx for Windows File Server
 	// file system or an FSx for ONTAP storage virtual machine (SVM) to a self-managed
 	// (including on-premises) Microsoft Active Directory (AD) directory. For more
@@ -1171,7 +1181,7 @@ type SelfManagedActiveDirectoryConfiguration struct {
 	DNSIPs                              []*string                       `json:"dnsIPs,omitempty"`
 	DomainJoinServiceAccountSecret      *string                         `json:"domainJoinServiceAccountSecret,omitempty"`
 	DomainName                          *string                         `json:"domainName,omitempty"`
-	FileSystemAdministratorsGroup       *string                         `json:"fileSystemAdministratorsGroup,omitempty"`
+	FileSystemAdministratorsGroup       *string                         `json:"administratorsGroup,omitempty"`
 	OrganizationalUnitDistinguishedName *string                         `json:"organizationalUnitDistinguishedName,omitempty"`
 	Password                            *ackv1alpha1.SecretKeyReference `json:"password,omitempty"`
 	UserName                            *string                         `json:"userName,omitempty"`

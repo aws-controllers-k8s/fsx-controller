@@ -36,8 +36,23 @@ import (
 // +kubebuilder:rbac:groups=kms.services.k8s.aws,resources=keys,verbs=get;list
 // +kubebuilder:rbac:groups=kms.services.k8s.aws,resources=keys/status,verbs=get;list
 
+// +kubebuilder:rbac:groups=ec2.services.k8s.aws,resources=subnets,verbs=get;list
+// +kubebuilder:rbac:groups=ec2.services.k8s.aws,resources=subnets/status,verbs=get;list
+
+// +kubebuilder:rbac:groups=ec2.services.k8s.aws,resources=routetables,verbs=get;list
+// +kubebuilder:rbac:groups=ec2.services.k8s.aws,resources=routetables/status,verbs=get;list
+
+// +kubebuilder:rbac:groups=ec2.services.k8s.aws,resources=subnets,verbs=get;list
+// +kubebuilder:rbac:groups=ec2.services.k8s.aws,resources=subnets/status,verbs=get;list
+
+// +kubebuilder:rbac:groups=ec2.services.k8s.aws,resources=routetables,verbs=get;list
+// +kubebuilder:rbac:groups=ec2.services.k8s.aws,resources=routetables/status,verbs=get;list
+
 // +kubebuilder:rbac:groups=ec2.services.k8s.aws,resources=securitygroups,verbs=get;list
 // +kubebuilder:rbac:groups=ec2.services.k8s.aws,resources=securitygroups/status,verbs=get;list
+
+// +kubebuilder:rbac:groups=ec2.services.k8s.aws,resources=subnets,verbs=get;list
+// +kubebuilder:rbac:groups=ec2.services.k8s.aws,resources=subnets/status,verbs=get;list
 
 // +kubebuilder:rbac:groups=ec2.services.k8s.aws,resources=subnets,verbs=get;list
 // +kubebuilder:rbac:groups=ec2.services.k8s.aws,resources=subnets/status,verbs=get;list
@@ -53,6 +68,30 @@ func (rm *resourceManager) ClearResolvedReferences(res acktypes.AWSResource) ack
 		ko.Spec.KMSKeyID = nil
 	}
 
+	if ko.Spec.OntapConfiguration != nil {
+		if ko.Spec.OntapConfiguration.PreferredSubnetRef != nil {
+			ko.Spec.OntapConfiguration.PreferredSubnetID = nil
+		}
+	}
+
+	if ko.Spec.OntapConfiguration != nil {
+		if len(ko.Spec.OntapConfiguration.RouteTableRefs) > 0 {
+			ko.Spec.OntapConfiguration.RouteTableIDs = nil
+		}
+	}
+
+	if ko.Spec.OpenZFSConfiguration != nil {
+		if ko.Spec.OpenZFSConfiguration.PreferredSubnetRef != nil {
+			ko.Spec.OpenZFSConfiguration.PreferredSubnetID = nil
+		}
+	}
+
+	if ko.Spec.OpenZFSConfiguration != nil {
+		if len(ko.Spec.OpenZFSConfiguration.RouteTableRefs) > 0 {
+			ko.Spec.OpenZFSConfiguration.RouteTableIDs = nil
+		}
+	}
+
 	if len(ko.Spec.SecurityGroupRefs) > 0 {
 		ko.Spec.SecurityGroupIDs = nil
 	}
@@ -61,7 +100,91 @@ func (rm *resourceManager) ClearResolvedReferences(res acktypes.AWSResource) ack
 		ko.Spec.SubnetIDs = nil
 	}
 
+	if ko.Spec.WindowsConfiguration != nil {
+		if ko.Spec.WindowsConfiguration.PreferredSubnetRef != nil {
+			ko.Spec.WindowsConfiguration.PreferredSubnetID = nil
+		}
+	}
+
 	return &resource{ko}
+}
+
+// EnsureReferences restores, onto a copy of `latest`, the cross-resource reference
+// (*Ref) fields it is missing, taking them from `desired`. Only reference fields are
+// written, so every concrete value on `latest` stands.
+//
+// A *Ref is a sibling of the concrete field it resolves into, so rebuilding the
+// containing struct from an AWS API response drops it. That disables
+// ClearResolvedReferences, which suppresses a resolved value only while the sibling
+// *Ref is visible, so the spec patch would otherwise delete the declared *Ref and
+// store the resolved value in its place.
+//
+// Only references reached through structs are restored, and each containing struct
+// is created on `latest` when `desired` has it and `latest` does not -- generated
+// set-output code nils a struct when the response omits it. A top-level *Ref needs
+// no help, since generated set-output code overwrites only the concrete field. One
+// reached through a list is not restored: it has no fixed address, and replacing the
+// whole list would discard whatever the service populated inside it.
+//
+// Nothing is written unless `desired` actually holds the reference, so a source that
+// declares none leaves `latest` untouched.
+func (rm *resourceManager) EnsureReferences(
+	desired acktypes.AWSResource,
+	latest acktypes.AWSResource,
+) acktypes.AWSResource {
+	// Deep copy the source as well, so a reference handed over below does not
+	// alias the caller's declared object.
+	desiredKO := rm.concreteResource(desired).ko.DeepCopy()
+	latestKO := rm.concreteResource(latest).ko.DeepCopy()
+
+	if desiredKO.Spec.OntapConfiguration != nil {
+		if desiredKO.Spec.OntapConfiguration.PreferredSubnetRef != nil {
+			if latestKO.Spec.OntapConfiguration == nil {
+				latestKO.Spec.OntapConfiguration = &svcapitypes.CreateFileSystemOntapConfiguration{}
+			}
+			if latestKO.Spec.OntapConfiguration.PreferredSubnetRef == nil {
+				latestKO.Spec.OntapConfiguration.PreferredSubnetRef = desiredKO.Spec.OntapConfiguration.PreferredSubnetRef
+			}
+		}
+		if len(desiredKO.Spec.OntapConfiguration.RouteTableRefs) > 0 {
+			if latestKO.Spec.OntapConfiguration == nil {
+				latestKO.Spec.OntapConfiguration = &svcapitypes.CreateFileSystemOntapConfiguration{}
+			}
+			if len(latestKO.Spec.OntapConfiguration.RouteTableRefs) == 0 {
+				latestKO.Spec.OntapConfiguration.RouteTableRefs = desiredKO.Spec.OntapConfiguration.RouteTableRefs
+			}
+		}
+	}
+	if desiredKO.Spec.OpenZFSConfiguration != nil {
+		if desiredKO.Spec.OpenZFSConfiguration.PreferredSubnetRef != nil {
+			if latestKO.Spec.OpenZFSConfiguration == nil {
+				latestKO.Spec.OpenZFSConfiguration = &svcapitypes.CreateFileSystemOpenZFSConfiguration{}
+			}
+			if latestKO.Spec.OpenZFSConfiguration.PreferredSubnetRef == nil {
+				latestKO.Spec.OpenZFSConfiguration.PreferredSubnetRef = desiredKO.Spec.OpenZFSConfiguration.PreferredSubnetRef
+			}
+		}
+		if len(desiredKO.Spec.OpenZFSConfiguration.RouteTableRefs) > 0 {
+			if latestKO.Spec.OpenZFSConfiguration == nil {
+				latestKO.Spec.OpenZFSConfiguration = &svcapitypes.CreateFileSystemOpenZFSConfiguration{}
+			}
+			if len(latestKO.Spec.OpenZFSConfiguration.RouteTableRefs) == 0 {
+				latestKO.Spec.OpenZFSConfiguration.RouteTableRefs = desiredKO.Spec.OpenZFSConfiguration.RouteTableRefs
+			}
+		}
+	}
+	if desiredKO.Spec.WindowsConfiguration != nil {
+		if desiredKO.Spec.WindowsConfiguration.PreferredSubnetRef != nil {
+			if latestKO.Spec.WindowsConfiguration == nil {
+				latestKO.Spec.WindowsConfiguration = &svcapitypes.CreateFileSystemWindowsConfiguration{}
+			}
+			if latestKO.Spec.WindowsConfiguration.PreferredSubnetRef == nil {
+				latestKO.Spec.WindowsConfiguration.PreferredSubnetRef = desiredKO.Spec.WindowsConfiguration.PreferredSubnetRef
+			}
+		}
+	}
+
+	return &resource{latestKO}
 }
 
 // ResolveReferences finds if there are any Reference field(s) present
@@ -86,6 +209,30 @@ func (rm *resourceManager) ResolveReferences(
 		resourceHasReferences = resourceHasReferences || fieldHasReferences
 	}
 
+	if fieldHasReferences, err := rm.resolveReferenceForOntapConfiguration_PreferredSubnetID(ctx, apiReader, ko); err != nil {
+		return &resource{ko}, (resourceHasReferences || fieldHasReferences), err
+	} else {
+		resourceHasReferences = resourceHasReferences || fieldHasReferences
+	}
+
+	if fieldHasReferences, err := rm.resolveReferenceForOntapConfiguration_RouteTableIDs(ctx, apiReader, ko); err != nil {
+		return &resource{ko}, (resourceHasReferences || fieldHasReferences), err
+	} else {
+		resourceHasReferences = resourceHasReferences || fieldHasReferences
+	}
+
+	if fieldHasReferences, err := rm.resolveReferenceForOpenZFSConfiguration_PreferredSubnetID(ctx, apiReader, ko); err != nil {
+		return &resource{ko}, (resourceHasReferences || fieldHasReferences), err
+	} else {
+		resourceHasReferences = resourceHasReferences || fieldHasReferences
+	}
+
+	if fieldHasReferences, err := rm.resolveReferenceForOpenZFSConfiguration_RouteTableIDs(ctx, apiReader, ko); err != nil {
+		return &resource{ko}, (resourceHasReferences || fieldHasReferences), err
+	} else {
+		resourceHasReferences = resourceHasReferences || fieldHasReferences
+	}
+
 	if fieldHasReferences, err := rm.resolveReferenceForSecurityGroupIDs(ctx, apiReader, ko); err != nil {
 		return &resource{ko}, (resourceHasReferences || fieldHasReferences), err
 	} else {
@@ -93,6 +240,12 @@ func (rm *resourceManager) ResolveReferences(
 	}
 
 	if fieldHasReferences, err := rm.resolveReferenceForSubnetIDs(ctx, apiReader, ko); err != nil {
+		return &resource{ko}, (resourceHasReferences || fieldHasReferences), err
+	} else {
+		resourceHasReferences = resourceHasReferences || fieldHasReferences
+	}
+
+	if fieldHasReferences, err := rm.resolveReferenceForWindowsConfiguration_PreferredSubnetID(ctx, apiReader, ko); err != nil {
 		return &resource{ko}, (resourceHasReferences || fieldHasReferences), err
 	} else {
 		resourceHasReferences = resourceHasReferences || fieldHasReferences
@@ -109,6 +262,30 @@ func validateReferenceFields(ko *svcapitypes.FileSystem) error {
 		return ackerr.ResourceReferenceAndIDNotSupportedFor("KMSKeyID", "KMSKeyRef")
 	}
 
+	if ko.Spec.OntapConfiguration != nil {
+		if ko.Spec.OntapConfiguration.PreferredSubnetRef != nil && ko.Spec.OntapConfiguration.PreferredSubnetID != nil {
+			return ackerr.ResourceReferenceAndIDNotSupportedFor("OntapConfiguration.PreferredSubnetID", "OntapConfiguration.PreferredSubnetRef")
+		}
+	}
+
+	if ko.Spec.OntapConfiguration != nil {
+		if len(ko.Spec.OntapConfiguration.RouteTableRefs) > 0 && len(ko.Spec.OntapConfiguration.RouteTableIDs) > 0 {
+			return ackerr.ResourceReferenceAndIDNotSupportedFor("OntapConfiguration.RouteTableIDs", "OntapConfiguration.RouteTableRefs")
+		}
+	}
+
+	if ko.Spec.OpenZFSConfiguration != nil {
+		if ko.Spec.OpenZFSConfiguration.PreferredSubnetRef != nil && ko.Spec.OpenZFSConfiguration.PreferredSubnetID != nil {
+			return ackerr.ResourceReferenceAndIDNotSupportedFor("OpenZFSConfiguration.PreferredSubnetID", "OpenZFSConfiguration.PreferredSubnetRef")
+		}
+	}
+
+	if ko.Spec.OpenZFSConfiguration != nil {
+		if len(ko.Spec.OpenZFSConfiguration.RouteTableRefs) > 0 && len(ko.Spec.OpenZFSConfiguration.RouteTableIDs) > 0 {
+			return ackerr.ResourceReferenceAndIDNotSupportedFor("OpenZFSConfiguration.RouteTableIDs", "OpenZFSConfiguration.RouteTableRefs")
+		}
+	}
+
 	if len(ko.Spec.SecurityGroupRefs) > 0 && len(ko.Spec.SecurityGroupIDs) > 0 {
 		return ackerr.ResourceReferenceAndIDNotSupportedFor("SecurityGroupIDs", "SecurityGroupRefs")
 	}
@@ -118,6 +295,12 @@ func validateReferenceFields(ko *svcapitypes.FileSystem) error {
 	}
 	if len(ko.Spec.SubnetRefs) == 0 && len(ko.Spec.SubnetIDs) == 0 {
 		return ackerr.ResourceReferenceOrIDRequiredFor("SubnetIDs", "SubnetRefs")
+	}
+
+	if ko.Spec.WindowsConfiguration != nil {
+		if ko.Spec.WindowsConfiguration.PreferredSubnetRef != nil && ko.Spec.WindowsConfiguration.PreferredSubnetID != nil {
+			return ackerr.ResourceReferenceAndIDNotSupportedFor("WindowsConfiguration.PreferredSubnetID", "WindowsConfiguration.PreferredSubnetRef")
+		}
 	}
 	return nil
 }
@@ -208,6 +391,268 @@ func getReferencedResourceState_Key(
 			"Status.ACKResourceMetadata.ARN")
 	}
 	return nil
+}
+
+// resolveReferenceForOntapConfiguration_PreferredSubnetID reads the resource referenced
+// from OntapConfiguration.PreferredSubnetRef field and sets the OntapConfiguration.PreferredSubnetID
+// from referenced resource. Returns a boolean indicating whether a reference
+// contains references, or an error
+func (rm *resourceManager) resolveReferenceForOntapConfiguration_PreferredSubnetID(
+	ctx context.Context,
+	apiReader client.Reader,
+	ko *svcapitypes.FileSystem,
+) (hasReferences bool, err error) {
+	if ko.Spec.OntapConfiguration != nil {
+		if ko.Spec.OntapConfiguration.PreferredSubnetRef != nil && ko.Spec.OntapConfiguration.PreferredSubnetRef.From != nil {
+			hasReferences = true
+			arr := ko.Spec.OntapConfiguration.PreferredSubnetRef.From
+			if arr.Name == nil || *arr.Name == "" {
+				return hasReferences, fmt.Errorf("provided resource reference is nil or empty: OntapConfiguration.PreferredSubnetRef")
+			}
+			namespace, _, err := ackrt.ValidateCrossNamespaceReference(
+				rm.cfg.EnableCrossNamespace,
+				ko.ObjectMeta.GetNamespace(),
+				arr.Namespace,
+				*arr.Name,
+			)
+			if err != nil {
+				return hasReferences, err
+			}
+			obj := &ec2apitypes.Subnet{}
+			if err := getReferencedResourceState_Subnet(ctx, apiReader, obj, *arr.Name, namespace); err != nil {
+				return hasReferences, err
+			}
+			ko.Spec.OntapConfiguration.PreferredSubnetID = (*string)(obj.Status.SubnetID)
+		}
+	}
+
+	return hasReferences, nil
+}
+
+// getReferencedResourceState_Subnet looks up whether a referenced resource
+// exists and is in a ACK.ResourceSynced=True state. If the referenced resource does exist and is
+// in a Synced state, returns nil, otherwise returns `ackerr.ResourceReferenceTerminalFor` or
+// `ResourceReferenceNotSyncedFor` depending on if the resource is in a Terminal state.
+func getReferencedResourceState_Subnet(
+	ctx context.Context,
+	apiReader client.Reader,
+	obj *ec2apitypes.Subnet,
+	name string, // the Kubernetes name of the referenced resource
+	namespace string, // the Kubernetes namespace of the referenced resource
+) error {
+	namespacedName := types.NamespacedName{
+		Namespace: namespace,
+		Name:      name,
+	}
+	err := apiReader.Get(ctx, namespacedName, obj)
+	if err != nil {
+		return err
+	}
+	var refResourceTerminal bool
+	for _, cond := range obj.Status.Conditions {
+		if cond.Type == ackv1alpha1.ConditionTypeTerminal &&
+			cond.Status == corev1.ConditionTrue {
+			return ackerr.ResourceReferenceTerminalFor(
+				"Subnet",
+				namespace, name)
+		}
+	}
+	if refResourceTerminal {
+		return ackerr.ResourceReferenceTerminalFor(
+			"Subnet",
+			namespace, name)
+	}
+	var refResourceSynced bool
+	for _, cond := range obj.Status.Conditions {
+		if cond.Type == ackv1alpha1.ConditionTypeResourceSynced &&
+			cond.Status == corev1.ConditionTrue {
+			refResourceSynced = true
+		}
+	}
+	if !refResourceSynced {
+		return ackerr.ResourceReferenceNotSyncedFor(
+			"Subnet",
+			namespace, name)
+	}
+	if obj.Status.SubnetID == nil {
+		return ackerr.ResourceReferenceMissingTargetFieldFor(
+			"Subnet",
+			namespace, name,
+			"Status.SubnetID")
+	}
+	return nil
+}
+
+// resolveReferenceForOntapConfiguration_RouteTableIDs reads the resource referenced
+// from OntapConfiguration.RouteTableRefs field and sets the OntapConfiguration.RouteTableIDs
+// from referenced resource. Returns a boolean indicating whether a reference
+// contains references, or an error
+func (rm *resourceManager) resolveReferenceForOntapConfiguration_RouteTableIDs(
+	ctx context.Context,
+	apiReader client.Reader,
+	ko *svcapitypes.FileSystem,
+) (hasReferences bool, err error) {
+	if ko.Spec.OntapConfiguration != nil {
+		for _, f0iter := range ko.Spec.OntapConfiguration.RouteTableRefs {
+			if f0iter != nil && f0iter.From != nil {
+				hasReferences = true
+				arr := f0iter.From
+				if arr.Name == nil || *arr.Name == "" {
+					return hasReferences, fmt.Errorf("provided resource reference is nil or empty: OntapConfiguration.RouteTableRefs")
+				}
+				namespace, _, err := ackrt.ValidateCrossNamespaceReference(
+					rm.cfg.EnableCrossNamespace,
+					ko.ObjectMeta.GetNamespace(),
+					arr.Namespace,
+					*arr.Name,
+				)
+				if err != nil {
+					return hasReferences, err
+				}
+				obj := &ec2apitypes.RouteTable{}
+				if err := getReferencedResourceState_RouteTable(ctx, apiReader, obj, *arr.Name, namespace); err != nil {
+					return hasReferences, err
+				}
+				if ko.Spec.OntapConfiguration.RouteTableIDs == nil {
+					ko.Spec.OntapConfiguration.RouteTableIDs = make([]*string, 0, 1)
+				}
+				ko.Spec.OntapConfiguration.RouteTableIDs = append(ko.Spec.OntapConfiguration.RouteTableIDs, (*string)(obj.Status.RouteTableID))
+			}
+		}
+	}
+
+	return hasReferences, nil
+}
+
+// getReferencedResourceState_RouteTable looks up whether a referenced resource
+// exists and is in a ACK.ResourceSynced=True state. If the referenced resource does exist and is
+// in a Synced state, returns nil, otherwise returns `ackerr.ResourceReferenceTerminalFor` or
+// `ResourceReferenceNotSyncedFor` depending on if the resource is in a Terminal state.
+func getReferencedResourceState_RouteTable(
+	ctx context.Context,
+	apiReader client.Reader,
+	obj *ec2apitypes.RouteTable,
+	name string, // the Kubernetes name of the referenced resource
+	namespace string, // the Kubernetes namespace of the referenced resource
+) error {
+	namespacedName := types.NamespacedName{
+		Namespace: namespace,
+		Name:      name,
+	}
+	err := apiReader.Get(ctx, namespacedName, obj)
+	if err != nil {
+		return err
+	}
+	var refResourceTerminal bool
+	for _, cond := range obj.Status.Conditions {
+		if cond.Type == ackv1alpha1.ConditionTypeTerminal &&
+			cond.Status == corev1.ConditionTrue {
+			return ackerr.ResourceReferenceTerminalFor(
+				"RouteTable",
+				namespace, name)
+		}
+	}
+	if refResourceTerminal {
+		return ackerr.ResourceReferenceTerminalFor(
+			"RouteTable",
+			namespace, name)
+	}
+	var refResourceSynced bool
+	for _, cond := range obj.Status.Conditions {
+		if cond.Type == ackv1alpha1.ConditionTypeResourceSynced &&
+			cond.Status == corev1.ConditionTrue {
+			refResourceSynced = true
+		}
+	}
+	if !refResourceSynced {
+		return ackerr.ResourceReferenceNotSyncedFor(
+			"RouteTable",
+			namespace, name)
+	}
+	if obj.Status.RouteTableID == nil {
+		return ackerr.ResourceReferenceMissingTargetFieldFor(
+			"RouteTable",
+			namespace, name,
+			"Status.RouteTableID")
+	}
+	return nil
+}
+
+// resolveReferenceForOpenZFSConfiguration_PreferredSubnetID reads the resource referenced
+// from OpenZFSConfiguration.PreferredSubnetRef field and sets the OpenZFSConfiguration.PreferredSubnetID
+// from referenced resource. Returns a boolean indicating whether a reference
+// contains references, or an error
+func (rm *resourceManager) resolveReferenceForOpenZFSConfiguration_PreferredSubnetID(
+	ctx context.Context,
+	apiReader client.Reader,
+	ko *svcapitypes.FileSystem,
+) (hasReferences bool, err error) {
+	if ko.Spec.OpenZFSConfiguration != nil {
+		if ko.Spec.OpenZFSConfiguration.PreferredSubnetRef != nil && ko.Spec.OpenZFSConfiguration.PreferredSubnetRef.From != nil {
+			hasReferences = true
+			arr := ko.Spec.OpenZFSConfiguration.PreferredSubnetRef.From
+			if arr.Name == nil || *arr.Name == "" {
+				return hasReferences, fmt.Errorf("provided resource reference is nil or empty: OpenZFSConfiguration.PreferredSubnetRef")
+			}
+			namespace, _, err := ackrt.ValidateCrossNamespaceReference(
+				rm.cfg.EnableCrossNamespace,
+				ko.ObjectMeta.GetNamespace(),
+				arr.Namespace,
+				*arr.Name,
+			)
+			if err != nil {
+				return hasReferences, err
+			}
+			obj := &ec2apitypes.Subnet{}
+			if err := getReferencedResourceState_Subnet(ctx, apiReader, obj, *arr.Name, namespace); err != nil {
+				return hasReferences, err
+			}
+			ko.Spec.OpenZFSConfiguration.PreferredSubnetID = (*string)(obj.Status.SubnetID)
+		}
+	}
+
+	return hasReferences, nil
+}
+
+// resolveReferenceForOpenZFSConfiguration_RouteTableIDs reads the resource referenced
+// from OpenZFSConfiguration.RouteTableRefs field and sets the OpenZFSConfiguration.RouteTableIDs
+// from referenced resource. Returns a boolean indicating whether a reference
+// contains references, or an error
+func (rm *resourceManager) resolveReferenceForOpenZFSConfiguration_RouteTableIDs(
+	ctx context.Context,
+	apiReader client.Reader,
+	ko *svcapitypes.FileSystem,
+) (hasReferences bool, err error) {
+	if ko.Spec.OpenZFSConfiguration != nil {
+		for _, f0iter := range ko.Spec.OpenZFSConfiguration.RouteTableRefs {
+			if f0iter != nil && f0iter.From != nil {
+				hasReferences = true
+				arr := f0iter.From
+				if arr.Name == nil || *arr.Name == "" {
+					return hasReferences, fmt.Errorf("provided resource reference is nil or empty: OpenZFSConfiguration.RouteTableRefs")
+				}
+				namespace, _, err := ackrt.ValidateCrossNamespaceReference(
+					rm.cfg.EnableCrossNamespace,
+					ko.ObjectMeta.GetNamespace(),
+					arr.Namespace,
+					*arr.Name,
+				)
+				if err != nil {
+					return hasReferences, err
+				}
+				obj := &ec2apitypes.RouteTable{}
+				if err := getReferencedResourceState_RouteTable(ctx, apiReader, obj, *arr.Name, namespace); err != nil {
+					return hasReferences, err
+				}
+				if ko.Spec.OpenZFSConfiguration.RouteTableIDs == nil {
+					ko.Spec.OpenZFSConfiguration.RouteTableIDs = make([]*string, 0, 1)
+				}
+				ko.Spec.OpenZFSConfiguration.RouteTableIDs = append(ko.Spec.OpenZFSConfiguration.RouteTableIDs, (*string)(obj.Status.RouteTableID))
+			}
+		}
+	}
+
+	return hasReferences, nil
 }
 
 // resolveReferenceForSecurityGroupIDs reads the resource referenced
@@ -342,56 +787,38 @@ func (rm *resourceManager) resolveReferenceForSubnetIDs(
 	return hasReferences, nil
 }
 
-// getReferencedResourceState_Subnet looks up whether a referenced resource
-// exists and is in a ACK.ResourceSynced=True state. If the referenced resource does exist and is
-// in a Synced state, returns nil, otherwise returns `ackerr.ResourceReferenceTerminalFor` or
-// `ResourceReferenceNotSyncedFor` depending on if the resource is in a Terminal state.
-func getReferencedResourceState_Subnet(
+// resolveReferenceForWindowsConfiguration_PreferredSubnetID reads the resource referenced
+// from WindowsConfiguration.PreferredSubnetRef field and sets the WindowsConfiguration.PreferredSubnetID
+// from referenced resource. Returns a boolean indicating whether a reference
+// contains references, or an error
+func (rm *resourceManager) resolveReferenceForWindowsConfiguration_PreferredSubnetID(
 	ctx context.Context,
 	apiReader client.Reader,
-	obj *ec2apitypes.Subnet,
-	name string, // the Kubernetes name of the referenced resource
-	namespace string, // the Kubernetes namespace of the referenced resource
-) error {
-	namespacedName := types.NamespacedName{
-		Namespace: namespace,
-		Name:      name,
-	}
-	err := apiReader.Get(ctx, namespacedName, obj)
-	if err != nil {
-		return err
-	}
-	var refResourceTerminal bool
-	for _, cond := range obj.Status.Conditions {
-		if cond.Type == ackv1alpha1.ConditionTypeTerminal &&
-			cond.Status == corev1.ConditionTrue {
-			return ackerr.ResourceReferenceTerminalFor(
-				"Subnet",
-				namespace, name)
+	ko *svcapitypes.FileSystem,
+) (hasReferences bool, err error) {
+	if ko.Spec.WindowsConfiguration != nil {
+		if ko.Spec.WindowsConfiguration.PreferredSubnetRef != nil && ko.Spec.WindowsConfiguration.PreferredSubnetRef.From != nil {
+			hasReferences = true
+			arr := ko.Spec.WindowsConfiguration.PreferredSubnetRef.From
+			if arr.Name == nil || *arr.Name == "" {
+				return hasReferences, fmt.Errorf("provided resource reference is nil or empty: WindowsConfiguration.PreferredSubnetRef")
+			}
+			namespace, _, err := ackrt.ValidateCrossNamespaceReference(
+				rm.cfg.EnableCrossNamespace,
+				ko.ObjectMeta.GetNamespace(),
+				arr.Namespace,
+				*arr.Name,
+			)
+			if err != nil {
+				return hasReferences, err
+			}
+			obj := &ec2apitypes.Subnet{}
+			if err := getReferencedResourceState_Subnet(ctx, apiReader, obj, *arr.Name, namespace); err != nil {
+				return hasReferences, err
+			}
+			ko.Spec.WindowsConfiguration.PreferredSubnetID = (*string)(obj.Status.SubnetID)
 		}
 	}
-	if refResourceTerminal {
-		return ackerr.ResourceReferenceTerminalFor(
-			"Subnet",
-			namespace, name)
-	}
-	var refResourceSynced bool
-	for _, cond := range obj.Status.Conditions {
-		if cond.Type == ackv1alpha1.ConditionTypeResourceSynced &&
-			cond.Status == corev1.ConditionTrue {
-			refResourceSynced = true
-		}
-	}
-	if !refResourceSynced {
-		return ackerr.ResourceReferenceNotSyncedFor(
-			"Subnet",
-			namespace, name)
-	}
-	if obj.Status.SubnetID == nil {
-		return ackerr.ResourceReferenceMissingTargetFieldFor(
-			"Subnet",
-			namespace, name,
-			"Status.SubnetID")
-	}
-	return nil
+
+	return hasReferences, nil
 }

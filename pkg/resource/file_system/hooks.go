@@ -91,12 +91,12 @@ func observedFileSystem(
 	resp *svcsdk.DescribeFileSystemsOutput,
 	ko *svcapitypes.FileSystem,
 ) *svcsdktypes.FileSystem {
-	if resp == nil || ko == nil || ko.Status.FileSystemID == nil {
+	if resp == nil || ko == nil || ko.Status.ID == nil {
 		return nil
 	}
 	for i := range resp.FileSystems {
 		fs := &resp.FileSystems[i]
-		if fs.FileSystemId != nil && *fs.FileSystemId == *ko.Status.FileSystemID {
+		if fs.FileSystemId != nil && *fs.FileSystemId == *ko.Status.ID {
 			return fs
 		}
 	}
@@ -547,7 +547,7 @@ func setDeleteFileSystemConfiguration(
 	r *resource,
 	input *svcsdk.DeleteFileSystemInput,
 ) error {
-	if r.ko.Spec.FileSystemType == nil {
+	if r.ko.Spec.Type == nil {
 		return nil
 	}
 	params, err := util.ParseDeletionAnnotations(r.ko.ObjectMeta.GetAnnotations())
@@ -557,7 +557,7 @@ func setDeleteFileSystemConfiguration(
 		// editing the annotation triggers a fresh reconcile.
 		return ackerr.NewTerminalError(err)
 	}
-	switch svcsdktypes.FileSystemType(*r.ko.Spec.FileSystemType) {
+	switch svcsdktypes.FileSystemType(*r.ko.Spec.Type) {
 	case svcsdktypes.FileSystemTypeLustre:
 		if params.SkipFinalBackup != nil {
 			input.LustreConfiguration = &svcsdktypes.DeleteFileSystemLustreConfiguration{
@@ -696,9 +696,8 @@ func newUpdateFileSystemLustreConfiguration(
 	res := &svcsdktypes.UpdateFileSystemLustreConfiguration{}
 	changed := false
 
-	// Unreachable today: AutoImportPolicy is compare-ignored because Describe
-	// returns it under DataRepositoryConfiguration, which code-gen cannot
-	// round-trip. Kept correct in case a read hook ever recovers the value.
+	// Describe nests AutoImportPolicy under DataRepositoryConfiguration;
+	// recoverObservedLustreDataRepository supplies it on read.
 	if delta.DifferentAt(p+"AutoImportPolicy") && spec.AutoImportPolicy != nil {
 		res.AutoImportPolicy = svcsdktypes.AutoImportPolicyType(*spec.AutoImportPolicy)
 		changed = true
@@ -1069,9 +1068,9 @@ func (rm *resourceManager) newUpdateRequestPayload(
 	conv := &int32Converter{}
 	// Prefer the ID from the most recent read; fall back to the stored CR in
 	// case `latest` was assembled without it.
-	fileSystemID := latest.ko.Status.FileSystemID
+	fileSystemID := latest.ko.Status.ID
 	if fileSystemID == nil {
-		fileSystemID = desired.ko.Status.FileSystemID
+		fileSystemID = desired.ko.Status.ID
 	}
 	res := &svcsdk.UpdateFileSystemInput{
 		FileSystemId: fileSystemID,
@@ -1086,8 +1085,8 @@ func (rm *resourceManager) newUpdateRequestPayload(
 		res.StorageType = svcsdktypes.StorageType(*desired.ko.Spec.StorageType)
 		changed = true
 	}
-	if delta.DifferentAt("Spec.FileSystemTypeVersion") && desired.ko.Spec.FileSystemTypeVersion != nil {
-		res.FileSystemTypeVersion = desired.ko.Spec.FileSystemTypeVersion
+	if delta.DifferentAt("Spec.TypeVersion") && desired.ko.Spec.TypeVersion != nil {
+		res.FileSystemTypeVersion = desired.ko.Spec.TypeVersion
 		changed = true
 	}
 	if delta.DifferentAt("Spec.NetworkType") && desired.ko.Spec.NetworkType != nil {
@@ -1217,7 +1216,7 @@ func setFileSystemStatus(
 		ko.Status.FailureDetails = nil
 	}
 	if fs.FileSystemId != nil {
-		ko.Status.FileSystemID = fs.FileSystemId
+		ko.Status.ID = fs.FileSystemId
 	}
 	if fs.Lifecycle != "" {
 		ko.Status.Lifecycle = aws.String(string(fs.Lifecycle))

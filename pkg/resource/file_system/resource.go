@@ -90,18 +90,18 @@ func (r *resource) SetIdentifiers(identifier *ackv1alpha1.AWSIdentifiers) error 
 	if identifier.NameOrID == "" {
 		return ackerrors.MissingNameIdentifier
 	}
-	r.ko.Status.FileSystemID = &identifier.NameOrID
+	r.ko.Status.ID = &identifier.NameOrID
 
 	return nil
 }
 
 // PopulateResourceFromAnnotation populates the fields passed from adoption annotation
 func (r *resource) PopulateResourceFromAnnotation(fields map[string]string) error {
-	f0, ok := fields["fileSystemID"]
+	f0, ok := fields["id"]
 	if !ok {
-		return ackerrors.NewTerminalError(fmt.Errorf("required field missing: fileSystemID"))
+		return ackerrors.NewTerminalError(fmt.Errorf("required field missing: id"))
 	}
-	r.ko.Status.FileSystemID = &f0
+	r.ko.Status.ID = &f0
 
 	return nil
 }

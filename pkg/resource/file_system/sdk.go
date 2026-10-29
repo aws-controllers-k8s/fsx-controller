@@ -112,19 +112,19 @@ func (rm *resourceManager) sdkFind(
 			ko.Status.FailureDetails = nil
 		}
 		if elem.FileSystemId != nil {
-			ko.Status.FileSystemID = elem.FileSystemId
+			ko.Status.ID = elem.FileSystemId
 		} else {
-			ko.Status.FileSystemID = nil
+			ko.Status.ID = nil
 		}
 		if elem.FileSystemType != "" {
-			ko.Spec.FileSystemType = aws.String(string(elem.FileSystemType))
+			ko.Spec.Type = aws.String(string(elem.FileSystemType))
 		} else {
-			ko.Spec.FileSystemType = nil
+			ko.Spec.Type = nil
 		}
 		if elem.FileSystemTypeVersion != nil {
-			ko.Spec.FileSystemTypeVersion = elem.FileSystemTypeVersion
+			ko.Spec.TypeVersion = elem.FileSystemTypeVersion
 		} else {
-			ko.Spec.FileSystemTypeVersion = nil
+			ko.Spec.TypeVersion = nil
 		}
 		if elem.KmsKeyId != nil {
 			ko.Spec.KMSKeyID = elem.KmsKeyId
@@ -502,7 +502,7 @@ func (rm *resourceManager) sdkFind(
 func (rm *resourceManager) requiredFieldsMissingFromReadManyInput(
 	r *resource,
 ) bool {
-	return r.ko.Status.FileSystemID == nil
+	return r.ko.Status.ID == nil
 
 }
 
@@ -513,9 +513,9 @@ func (rm *resourceManager) newListRequestPayload(
 ) (*svcsdk.DescribeFileSystemsInput, error) {
 	res := &svcsdk.DescribeFileSystemsInput{}
 
-	if r.ko.Status.FileSystemID != nil {
+	if r.ko.Status.ID != nil {
 		f0 := []string{}
-		f0 = append(f0, *r.ko.Status.FileSystemID)
+		f0 = append(f0, *r.ko.Status.ID)
 		res.FileSystemIds = f0
 	}
 
@@ -575,19 +575,19 @@ func (rm *resourceManager) sdkCreate(
 		ko.Status.FailureDetails = nil
 	}
 	if resp.FileSystem.FileSystemId != nil {
-		ko.Status.FileSystemID = resp.FileSystem.FileSystemId
+		ko.Status.ID = resp.FileSystem.FileSystemId
 	} else {
-		ko.Status.FileSystemID = nil
+		ko.Status.ID = nil
 	}
 	if resp.FileSystem.FileSystemType != "" {
-		ko.Spec.FileSystemType = aws.String(string(resp.FileSystem.FileSystemType))
+		ko.Spec.Type = aws.String(string(resp.FileSystem.FileSystemType))
 	} else {
-		ko.Spec.FileSystemType = nil
+		ko.Spec.Type = nil
 	}
 	if resp.FileSystem.FileSystemTypeVersion != nil {
-		ko.Spec.FileSystemTypeVersion = resp.FileSystem.FileSystemTypeVersion
+		ko.Spec.TypeVersion = resp.FileSystem.FileSystemTypeVersion
 	} else {
-		ko.Spec.FileSystemTypeVersion = nil
+		ko.Spec.TypeVersion = nil
 	}
 	if resp.FileSystem.KmsKeyId != nil {
 		ko.Spec.KMSKeyID = resp.FileSystem.KmsKeyId
@@ -971,11 +971,11 @@ func (rm *resourceManager) newCreateRequestPayload(
 ) (*svcsdk.CreateFileSystemInput, error) {
 	res := &svcsdk.CreateFileSystemInput{}
 
-	if r.ko.Spec.FileSystemType != nil {
-		res.FileSystemType = svcsdktypes.FileSystemType(*r.ko.Spec.FileSystemType)
+	if r.ko.Spec.Type != nil {
+		res.FileSystemType = svcsdktypes.FileSystemType(*r.ko.Spec.Type)
 	}
-	if r.ko.Spec.FileSystemTypeVersion != nil {
-		res.FileSystemTypeVersion = r.ko.Spec.FileSystemTypeVersion
+	if r.ko.Spec.TypeVersion != nil {
+		res.FileSystemTypeVersion = r.ko.Spec.TypeVersion
 	}
 	if r.ko.Spec.KMSKeyID != nil {
 		res.KmsKeyId = r.ko.Spec.KMSKeyID
@@ -1518,8 +1518,8 @@ func (rm *resourceManager) newDeleteRequestPayload(
 ) (*svcsdk.DeleteFileSystemInput, error) {
 	res := &svcsdk.DeleteFileSystemInput{}
 
-	if r.ko.Status.FileSystemID != nil {
-		res.FileSystemId = r.ko.Status.FileSystemID
+	if r.ko.Status.ID != nil {
+		res.FileSystemId = r.ko.Status.ID
 	}
 
 	return res, nil

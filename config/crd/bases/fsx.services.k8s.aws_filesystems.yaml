@@ -65,38 +65,6 @@ spec:
 
               A description of a specific Amazon FSx file system.
             properties:
-              fileSystemType:
-                description: |-
-                  The type of Amazon FSx file system to create. Valid values are WINDOWS, LUSTRE,
-                  ONTAP, and OPENZFS.
-                type: string
-                x-kubernetes-validations:
-                - message: Value is immutable once set
-                  rule: self == oldSelf
-              fileSystemTypeVersion:
-                description: |-
-                  For FSx for Lustre file systems, sets the Lustre version for the file system
-                  that you're creating. Valid values are 2.10, 2.12, and 2.15:
-
-                     * 2.10 is supported by the Scratch and Persistent_1 Lustre deployment
-                     types.
-
-                     * 2.12 is supported by all Lustre deployment types, except for PERSISTENT_2
-                     with a metadata configuration mode.
-
-                     * 2.15 is supported by all Lustre deployment types and is recommended
-                     for all new file systems.
-
-                  Default value is 2.10, except for the following deployments:
-
-                     * Default value is 2.12 when DeploymentType is set to PERSISTENT_2 without
-                     a metadata configuration mode.
-
-                     * Default value is 2.15 when DeploymentType is set to PERSISTENT_2 with
-                     a metadata configuration mode.
-
-                  Regex Pattern: `^[0-9](.[0-9]*)*$`
-                type: string
               kmsKeyID:
                 description: 'Regex Pattern: `^.{1,2048}$`'
                 type: string
@@ -351,9 +319,43 @@ spec:
                     x-kubernetes-validations:
                     - message: Value is immutable once set
                       rule: self == oldSelf
+                  preferredSubnetRef:
+                    description: Reference field for PreferredSubnetID
+                    properties:
+                      from:
+                        description: |-
+                          AWSResourceReference provides all the values necessary to reference another
+                          k8s resource for finding the identifier(Id/ARN/Name)
+                        properties:
+                          name:
+                            type: string
+                          namespace:
+                            type: string
+                        type: object
+                    type: object
                   routeTableIDs:
                     items:
                       type: string
+                    type: array
+                  routeTableRefs:
+                    description: Reference field for RouteTableIDs
+                    items:
+                      description: "AWSResourceReferenceWrapper provides a wrapper
+                        around *AWSResourceReference\ntype to provide more user friendly
+                        syntax for references using 'from' field\nEx:\nAPIIDRef:\n\n\tfrom:\n\t
+                        \ name: my-api"
+                      properties:
+                        from:
+                          description: |-
+                            AWSResourceReference provides all the values necessary to reference another
+                            k8s resource for finding the identifier(Id/ARN/Name)
+                          properties:
+                            name:
+                              type: string
+                            namespace:
+                              type: string
+                          type: object
+                      type: object
                     type: array
                   throughputCapacity:
                     description: |-
@@ -430,6 +432,20 @@ spec:
                     x-kubernetes-validations:
                     - message: Value is immutable once set
                       rule: self == oldSelf
+                  preferredSubnetRef:
+                    description: Reference field for PreferredSubnetID
+                    properties:
+                      from:
+                        description: |-
+                          AWSResourceReference provides all the values necessary to reference another
+                          k8s resource for finding the identifier(Id/ARN/Name)
+                        properties:
+                          name:
+                            type: string
+                          namespace:
+                            type: string
+                        type: object
+                    type: object
                   readCacheConfiguration:
                     description: |-
                       The configuration for the optional provisioned SSD read cache on Amazon FSx
@@ -503,6 +519,26 @@ spec:
                   routeTableIDs:
                     items:
                       type: string
+                    type: array
+                  routeTableRefs:
+                    description: Reference field for RouteTableIDs
+                    items:
+                      description: "AWSResourceReferenceWrapper provides a wrapper
+                        around *AWSResourceReference\ntype to provide more user friendly
+                        syntax for references using 'from' field\nEx:\nAPIIDRef:\n\n\tfrom:\n\t
+                        \ name: my-api"
+                      properties:
+                        from:
+                          description: |-
+                            AWSResourceReference provides all the values necessary to reference another
+                            k8s resource for finding the identifier(Id/ARN/Name)
+                          properties:
+                            name:
+                              type: string
+                            namespace:
+                              type: string
+                          type: object
+                      type: object
                     type: array
                   throughputCapacity:
                     description: |-
@@ -672,6 +708,38 @@ spec:
                       type: string
                   type: object
                 type: array
+              type:
+                description: |-
+                  The type of Amazon FSx file system to create. Valid values are WINDOWS, LUSTRE,
+                  ONTAP, and OPENZFS.
+                type: string
+                x-kubernetes-validations:
+                - message: Value is immutable once set
+                  rule: self == oldSelf
+              typeVersion:
+                description: |-
+                  For FSx for Lustre file systems, sets the Lustre version for the file system
+                  that you're creating. Valid values are 2.10, 2.12, and 2.15:
+
+                     * 2.10 is supported by the Scratch and Persistent_1 Lustre deployment
+                     types.
+
+                     * 2.12 is supported by all Lustre deployment types, except for PERSISTENT_2
+                     with a metadata configuration mode.
+
+                     * 2.15 is supported by all Lustre deployment types and is recommended
+                     for all new file systems.
+
+                  Default value is 2.10, except for the following deployments:
+
+                     * Default value is 2.12 when DeploymentType is set to PERSISTENT_2 without
+                     a metadata configuration mode.
+
+                     * Default value is 2.15 when DeploymentType is set to PERSISTENT_2 with
+                     a metadata configuration mode.
+
+                  Regex Pattern: `^[0-9](.[0-9]*)*$`
+                type: string
               windowsConfiguration:
                 description: The Microsoft Windows configuration for the file system
                   that's being created.
@@ -759,6 +827,20 @@ spec:
                     x-kubernetes-validations:
                     - message: Value is immutable once set
                       rule: self == oldSelf
+                  preferredSubnetRef:
+                    description: Reference field for PreferredSubnetID
+                    properties:
+                      from:
+                        description: |-
+                          AWSResourceReference provides all the values necessary to reference another
+                          k8s resource for finding the identifier(Id/ARN/Name)
+                        properties:
+                          name:
+                            type: string
+                          namespace:
+                            type: string
+                        type: object
+                    type: object
                   selfManagedActiveDirectoryConfiguration:
                     description: |-
                       The configuration that Amazon FSx uses to join a FSx for Windows File Server
@@ -768,6 +850,8 @@ spec:
                       Active Directory (https://docs.aws.amazon.com/fsx/latest/WindowsGuide/self-managed-AD.html)
                       or Managing FSx for ONTAP SVMs (https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/managing-svms.html).
                     properties:
+                      administratorsGroup:
+                        type: string
                       dnsIPs:
                         items:
                           type: string
@@ -775,8 +859,6 @@ spec:
                       domainJoinServiceAccountSecret:
                         type: string
                       domainName:
-                        type: string
-                      fileSystemAdministratorsGroup:
                         type: string
                       organizationalUnitDistinguishedName:
                         type: string
@@ -819,7 +901,7 @@ spec:
                     type: string
                 type: object
             required:
-            - fileSystemType
+            - type
             type: object
           status:
             description: FileSystemStatus defines the observed state of FileSystem
@@ -911,7 +993,7 @@ spec:
                     description: A detailed error message.
                     type: string
                 type: object
-              fileSystemID:
+              id:
                 description: |-
                   The system-generated, unique 17-digit ID of the file system.
 

@@ -38,6 +38,23 @@ resources:
     # list), so the generated newUpdateRequestPayload does not compile.
     update_operation:
       custom_method_name: customUpdateFileSystem
+    # Drop the FileSystem prefix that stutters on a FileSystem kind.
+    renames:
+      operations:
+        CreateFileSystem:
+          input_fields:
+            FileSystemType: Type
+            FileSystemTypeVersion: TypeVersion
+          output_fields:
+            FileSystemId: ID
+        DescribeFileSystems:
+          output_fields:
+            FileSystemType: Type
+            FileSystemTypeVersion: TypeVersion
+            FileSystemId: ID
+        DeleteFileSystem:
+          input_fields:
+            FileSystemId: ID
     hooks:
       # sdkCreate/sdkFind assign ko.Spec.<Type>Configuration wholesale from the
       # output shape, which drops create-only members (and secret references)
@@ -87,8 +104,10 @@ resources:
       # nil -- and that ARN is the input to TagResource, so tag sync never runs.
       ResourceARN:
         is_arn: true
-      FileSystemType:
+      # Without go_tag the Go-keyword escape would serialize this as `type_`.
+      Type:
         is_immutable: true
+        go_tag: json:"type"
       SubnetIds:
         is_immutable: true
         references:
@@ -124,12 +143,30 @@ resources:
         is_immutable: true
       OntapConfiguration.PreferredSubnetId:
         is_immutable: true
+        references:
+          resource: Subnet
+          service_name: ec2
+          path: Status.SubnetID
+      OntapConfiguration.RouteTableIds:
+        references:
+          resource: RouteTable
+          service_name: ec2
+          path: Status.RouteTableID
       OpenZFSConfiguration.DeploymentType:
         is_immutable: true
       OpenZFSConfiguration.EndpointIpAddressRange:
         is_immutable: true
       OpenZFSConfiguration.PreferredSubnetId:
         is_immutable: true
+        references:
+          resource: Subnet
+          service_name: ec2
+          path: Status.SubnetID
+      OpenZFSConfiguration.RouteTableIds:
+        references:
+          resource: RouteTable
+          service_name: ec2
+          path: Status.RouteTableID
       WindowsConfiguration.ActiveDirectoryId:
         is_immutable: true
       WindowsConfiguration.CopyTagsToBackups:
@@ -138,6 +175,10 @@ resources:
         is_immutable: true
       WindowsConfiguration.PreferredSubnetId:
         is_immutable: true
+        references:
+          resource: Subnet
+          service_name: ec2
+          path: Status.SubnetID
       # Never returned by Describe, so `latest` is always nil and every
       # reconcile would re-issue UpdateFileSystem to re-set the password.
       # Same pairing as elasticache AuthToken / memorydb Password. Changing the
@@ -147,6 +188,8 @@ resources:
         is_secret: true
         compare:
           is_ignored: true
+      WindowsConfiguration.SelfManagedActiveDirectoryConfiguration.FileSystemAdministratorsGroup:
+        go_tag: json:"administratorsGroup,omitempty"
       WindowsConfiguration.SelfManagedActiveDirectoryConfiguration.Password:
         is_secret: true
         compare:

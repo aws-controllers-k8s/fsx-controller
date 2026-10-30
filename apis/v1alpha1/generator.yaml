@@ -238,11 +238,11 @@ resources:
       order_by: index
       additional_columns:
         - name: ID
-          json_path: .status.fileSystemID
+          json_path: .status.id
           type: string
           index: 10
         - name: TYPE
-          json_path: .spec.fileSystemType
+          json_path: .spec.type
           type: string
           index: 15
         - name: STORAGE

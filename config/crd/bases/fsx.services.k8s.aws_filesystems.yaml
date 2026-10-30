@@ -15,10 +15,10 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.fileSystemID
+    - jsonPath: .status.id
       name: ID
       type: string
-    - jsonPath: .spec.fileSystemType
+    - jsonPath: .spec.type
       name: TYPE
       type: string
     - jsonPath: .spec.storageCapacity

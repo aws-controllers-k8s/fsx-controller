@@ -233,8 +233,8 @@ type FileSystemStatus struct {
 // FileSystem is the Schema for the FileSystems API
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="ID",type=string,priority=0,JSONPath=`.status.fileSystemID`
-// +kubebuilder:printcolumn:name="TYPE",type=string,priority=0,JSONPath=`.spec.fileSystemType`
+// +kubebuilder:printcolumn:name="ID",type=string,priority=0,JSONPath=`.status.id`
+// +kubebuilder:printcolumn:name="TYPE",type=string,priority=0,JSONPath=`.spec.type`
 // +kubebuilder:printcolumn:name="STORAGE",type=integer,priority=0,JSONPath=`.spec.storageCapacity`
 // +kubebuilder:printcolumn:name="DNSNAME",type=string,priority=1,JSONPath=`.status.dnsName`
 // +kubebuilder:printcolumn:name="STATE",type=string,priority=0,JSONPath=`.status.lifecycle`

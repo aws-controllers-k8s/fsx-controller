@@ -2,7 +2,6 @@ ignore:
   resource_names:
       - AndAttachS3AccessPoint
       - Backup
-      - DataRepositoryAssociation
       - DataRepositoryTask
       - FileCache
       - FileSystemFromBackup
@@ -27,7 +26,125 @@ ignore:
       - DeleteFileSystemInput.LustreConfiguration
       - DeleteFileSystemInput.OpenZFSConfiguration
       - DeleteFileSystemInput.WindowsConfiguration
+      # Populated only for Amazon File Cache associations. This resource
+      # manages FSx for Lustre associations only: CreateDataRepositoryAssociation
+      # has no cache input, so these can never be set by this controller.
+      - DataRepositoryAssociation.FileCacheId
+      - DataRepositoryAssociation.FileCachePath
+      - DataRepositoryAssociation.NFS
+      - DataRepositoryAssociation.DataRepositorySubdirectories
 resources:
+  DataRepositoryAssociation:
+    ignore_idempotency_token: true
+    renames:
+      operations:
+        CreateDataRepositoryAssociation:
+          output_fields:
+            AssociationId: ID
+        # FindIdentifiersInShape does not recognise `AssociationIds`, so
+        # without the IDs rename newListRequestPayload never filters by
+        # Status.ID and Describe returns every association in the region.
+        DescribeDataRepositoryAssociations:
+          input_fields:
+            AssociationIds: IDs
+          output_fields:
+            AssociationId: ID
+        UpdateDataRepositoryAssociation:
+          input_fields:
+            AssociationId: ID
+          output_fields:
+            AssociationId: ID
+        DeleteDataRepositoryAssociation:
+          input_fields:
+            AssociationId: ID
+    hooks:
+      # UpdateDataRepositoryAssociation has no Tags member; tags go through
+      # TagResource/UntagResource.
+      sdk_update_pre_build_request:
+        template_path: hooks/data_repository_association/sdk_update_pre_build_request.go.tpl
+      # DeleteDataInFileSystem is a delete-time option, read from the
+      # fsx.services.k8s.aws/delete-data-in-file-system annotation. The service
+      # rejects a delete that omits it (despite the SDK marking it optional),
+      # so an absent annotation sends the documented default, false.
+      sdk_delete_post_build_request:
+        template_path: hooks/data_repository_association/sdk_delete_post_build_request.go.tpl
+      # Delete is async: hold the finalizer until Describe reports
+      # DataRepositoryAssociationNotFound.
+      sdk_delete_post_request:
+        template_path: hooks/data_repository_association/sdk_delete_post_request.go.tpl
+    # Tags round-trip via DescribeDataRepositoryAssociations.
+    tags:
+      ignore: false
+    synced:
+      when:
+        - path: Status.Lifecycle
+          in: [ "AVAILABLE" ]
+    # Skip a redundant DeleteDataRepositoryAssociation while one is already in
+    # flight. Every other state is allowed so a requested delete is never
+    # blocked. The generated guard returns a nil resource, so Status is not
+    # patched during the wait and may show the pre-delete lifecycle (FileSystem
+    # returns `r` from a hand-written hook for this reason). A code-generator
+    # change to return the resource from the delete guard would fix it.
+    deletable:
+      when:
+        - path: Status.Lifecycle
+          in: [ "AVAILABLE", "MISCONFIGURED", "FAILED", "CREATING", "UPDATING" ]
+    # No terminal_codes: BadRequest is the catch-all (also overlapping paths);
+    # FileSystemNotFound/UnsupportedOperation are fixed only through the
+    # immutable FileSystemId or the referenced FileSystem's state;
+    # ServiceLimitExceeded is external; IncompatibleParameterError is an
+    # idempotency-token clash the SDK clears next reconcile.
+    exceptions:
+      errors:
+        404:
+          code: DataRepositoryAssociationNotFound
+    fields:
+      # Only `ARN`/`DataRepositoryAssociationARN` are auto-detected; syncTags
+      # reads the ARN from Status.ACKResourceMetadata.ARN.
+      ResourceARN:
+        is_arn: true
+      # Absent from UpdateDataRepositoryAssociationInput -- create-only.
+      # Known gap (community#3097): the CEL rule is skipped when the old value
+      # is absent and cannot see FileSystemRef changes; Describe still reports
+      # the actual values, so the delta remains visible.
+      FileSystemId:
+        is_immutable: true
+        references:
+          resource: FileSystem
+          path: Status.ID
+      DataRepositoryPath:
+        is_immutable: true
+      FileSystemPath:
+        is_immutable: true
+      BatchImportMetaDataOnCreate:
+        is_immutable: true
+        late_initialize:
+          skip_incomplete_check: {}
+      # Server default 1024 MiB.
+      ImportedFileChunkSize:
+        late_initialize:
+          skip_incomplete_check: {}
+    print:
+      add_age_column: true
+      add_synced_column: true
+      order_by: index
+      additional_columns:
+        - name: ID
+          json_path: .status.id
+          type: string
+          index: 10
+        - name: FILESYSTEM
+          json_path: .spec.fileSystemID
+          type: string
+          index: 15
+        - name: PATH
+          json_path: .spec.fileSystemPath
+          type: string
+          index: 20
+        - name: STATE
+          json_path: .status.lifecycle
+          type: string
+          index: 30
   FileSystem:
     # ClientRequestToken and friends are SDK implementation details the
     # middleware auto-fills; excluded by trait rather than by naming each

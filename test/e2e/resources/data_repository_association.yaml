@@ -1,0 +1,18 @@
+apiVersion: fsx.services.k8s.aws/v1alpha1
+kind: DataRepositoryAssociation
+metadata:
+  name: $DRA_NAME
+spec:
+  fileSystemRef:
+    from:
+      name: $FILE_SYSTEM_NAME
+  fileSystemPath: $FILE_SYSTEM_PATH
+  dataRepositoryPath: s3://$DATA_REPOSITORY_BUCKET_NAME/$DATA_REPOSITORY_PREFIX/
+  importedFileChunkSize: $IMPORTED_FILE_CHUNK_SIZE
+  s3:
+    autoImportPolicy:
+      events:
+        - NEW
+  tags:
+    - key: $TAG_KEY
+      value: $TAG_VALUE

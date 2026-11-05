@@ -196,3 +196,82 @@ class FSxValidator:
             )
             time.sleep(period_length)
         return self.get_file_system(file_system_id) is None
+
+
+# The only errors get_data_repository_association translates to None.
+DRA_NOT_FOUND_ERROR_CODES = frozenset(("DataRepositoryAssociationNotFound",))
+
+
+class DataRepositoryAssociationValidator:
+    def __init__(self, fsx_client):
+        self.fsx_client = fsx_client
+
+    def get(self, association_id: str) -> Optional[dict]:
+        """Returns the association with the supplied ID, or None once FSx no
+        longer reports it. Any error other than not-found is re-raised, so a
+        transient failure cannot pass for a completed delete.
+        """
+        try:
+            resp = self.fsx_client.describe_data_repository_associations(
+                AssociationIds=[association_id],
+            )
+            associations = resp.get("Associations", [])
+            if len(associations) == 0:
+                return None
+            return associations[0]
+        except ClientError as e:
+            code = e.response.get("Error", {}).get("Code")
+            if code in DRA_NOT_FOUND_ERROR_CODES:
+                return None
+            logging.error(
+                f"describe_data_repository_associations({association_id}) "
+                f"failed with {code}"
+            )
+            raise
+
+    def get_tags(self, association_id: str) -> Dict[str, str]:
+        dra = self.get(association_id)
+        if dra is None:
+            return {}
+        return {t["Key"]: t["Value"] for t in dra.get("Tags", [])}
+
+    def wait_until(
+        self,
+        association_id: str,
+        predicate,
+        description: str,
+        wait_periods: int = 40,
+        period_length: int = 15,
+    ) -> bool:
+        """Polls Describe until predicate(association) is true.
+
+        Synced may still be True from the pre-update reconcile when a test
+        looks at it, so the AWS API is the reliable signal an update landed.
+        """
+        for _ in range(wait_periods):
+            dra = self.get(association_id)
+            if dra is not None and predicate(dra):
+                return True
+            logging.info(
+                f"association {association_id} not yet {description}; "
+                f"lifecycle {None if dra is None else dra.get('Lifecycle')}"
+            )
+            time.sleep(period_length)
+        return False
+
+    def wait_until_gone(
+        self,
+        association_id: str,
+        wait_periods: int = 40,
+        period_length: int = 15,
+    ) -> bool:
+        for _ in range(wait_periods):
+            dra = self.get(association_id)
+            if dra is None:
+                return True
+            logging.info(
+                f"association {association_id} still present in state "
+                f"{dra.get('Lifecycle')}; waiting"
+            )
+            time.sleep(period_length)
+        return self.get(association_id) is None

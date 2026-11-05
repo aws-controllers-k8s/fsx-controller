@@ -63,6 +63,29 @@ type Alias struct {
 	Name *string `json:"name,omitempty"`
 }
 
+// Describes a data repository association's automatic export policy. The AutoExportPolicy
+// defines the types of updated objects on the file system that will be automatically
+// exported to the data repository. As you create, modify, or delete files,
+// Amazon FSx for Lustre automatically exports the defined changes asynchronously
+// once your application finishes modifying the file.
+//
+// The AutoExportPolicy is only supported on Amazon FSx for Lustre file systems
+// with a data repository association.
+type AutoExportPolicy struct {
+	Events []*string `json:"events,omitempty"`
+}
+
+// Describes the data repository association's automatic import policy. The
+// AutoImportPolicy defines how Amazon FSx keeps your file metadata and directory
+// listings up to date by importing changes to your Amazon FSx for Lustre file
+// system as you modify objects in a linked S3 bucket.
+//
+// The AutoImportPolicy is only supported on Amazon FSx for Lustre file systems
+// with a data repository association.
+type AutoImportPolicy struct {
+	Events []*string `json:"events,omitempty"`
+}
+
 // A backup of an Amazon FSx for Windows File Server, Amazon FSx for Lustre
 // file system, Amazon FSx for NetApp ONTAP volume, or Amazon FSx for OpenZFS
 // file system.
@@ -457,7 +480,9 @@ type CreateSvmActiveDirectoryConfiguration struct {
 // Data repository associations are supported on Amazon File Cache resources
 // and all FSx for Lustre 2.12 and 2.15 file systems, excluding Intelligent-Tiering
 // and scratch_1 file systems.
-type DataRepositoryAssociation struct {
+type DataRepositoryAssociation_SDK struct {
+	AssociationID               *string `json:"associationID,omitempty"`
+	BatchImportMetaDataOnCreate *bool   `json:"batchImportMetaDataOnCreate,omitempty"`
 	// The time that the resource was created, in seconds (since 1970-01-01T00:00:00Z),
 	// also known as Unix time.
 	CreationTime       *metav1.Time `json:"creationTime,omitempty"`
@@ -467,6 +492,7 @@ type DataRepositoryAssociation struct {
 	FailureDetails *DataRepositoryFailureDetails `json:"failureDetails,omitempty"`
 	// The globally unique ID of the file system, assigned by Amazon FSx.
 	FileSystemID          *string `json:"fileSystemID,omitempty"`
+	FileSystemPath        *string `json:"fileSystemPath,omitempty"`
 	ImportedFileChunkSize *int64  `json:"importedFileChunkSize,omitempty"`
 	Lifecycle             *string `json:"lifecycle,omitempty"`
 	// The Amazon Resource Name (ARN) for a given resource. ARNs uniquely identify
@@ -475,6 +501,17 @@ type DataRepositoryAssociation struct {
 	// see Amazon Resource Names (ARNs) (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the Amazon Web Services General Reference.
 	ResourceARN *string `json:"resourceARN,omitempty"`
+	// The configuration for an Amazon S3 data repository linked to an Amazon FSx
+	// for Lustre file system with a data repository association. The configuration
+	// consists of an AutoImportPolicy that defines which file events on the data
+	// repository are automatically imported to the file system and an AutoExportPolicy
+	// that defines which file events on the file system are automatically exported
+	// to the data repository. File events are when files or directories are added,
+	// changed, or deleted on the file system or the data repository.
+	//
+	// Data repository associations on Amazon File Cache don't use S3DataRepositoryConfiguration
+	// because they don't support automatic import or automatic export.
+	S3 *S3DataRepositoryConfiguration `json:"s3,omitempty"`
 	// A list of Tag values, with a maximum of 50 elements.
 	Tags []*Tag `json:"tags,omitempty"`
 }
@@ -627,8 +664,9 @@ type FileCache struct {
 	CreationTime *metav1.Time `json:"creationTime,omitempty"`
 	// The file system's DNS name. You can mount your file system using its DNS
 	// name.
-	DNSName              *string `json:"dnsName,omitempty"`
-	FileCacheTypeVersion *string `json:"fileCacheTypeVersion,omitempty"`
+	DNSName                      *string   `json:"dnsName,omitempty"`
+	DataRepositoryAssociationIDs []*string `json:"dataRepositoryAssociationIDs,omitempty"`
+	FileCacheTypeVersion         *string   `json:"fileCacheTypeVersion,omitempty"`
 	// Specifies the ID of the Key Management Service (KMS) key to use for encrypting
 	// data on Amazon FSx file systems, as follows:
 	//
@@ -676,8 +714,9 @@ type FileCacheCreating struct {
 	CreationTime *metav1.Time `json:"creationTime,omitempty"`
 	// The file system's DNS name. You can mount your file system using its DNS
 	// name.
-	DNSName              *string `json:"dnsName,omitempty"`
-	FileCacheTypeVersion *string `json:"fileCacheTypeVersion,omitempty"`
+	DNSName                      *string   `json:"dnsName,omitempty"`
+	DataRepositoryAssociationIDs []*string `json:"dataRepositoryAssociationIDs,omitempty"`
+	FileCacheTypeVersion         *string   `json:"fileCacheTypeVersion,omitempty"`
 	// Specifies the ID of the Key Management Service (KMS) key to use for encrypting
 	// data on Amazon FSx file systems, as follows:
 	//
@@ -727,6 +766,7 @@ type FileCacheCreating struct {
 // The DRA does not support automatic import or automatic export.
 type FileCacheDataRepositoryAssociation struct {
 	DataRepositoryPath *string `json:"dataRepositoryPath,omitempty"`
+	FileCachePath      *string `json:"fileCachePath,omitempty"`
 }
 
 // A structure providing details of any failures that occurred.
@@ -859,6 +899,15 @@ type FileSystem_SDK struct {
 	WindowsConfiguration *WindowsFileSystemConfiguration `json:"windowsConfiguration,omitempty"`
 }
 
+// A filter used to restrict the results of describe calls. You can use multiple
+// filters to return results that meet all applied filter requirements.
+type Filter struct {
+	// The name for a filter.
+	Name *string `json:"name,omitempty"`
+	// A list of filter values.
+	Values []*string `json:"values,omitempty"`
+}
+
 // Describes why a resource lifecycle state changed.
 type LifecycleTransitionReason struct {
 	// A detailed error message.
@@ -956,6 +1005,20 @@ type LustreReadCacheConfiguration struct {
 type LustreRootSquashConfiguration struct {
 	NoSquashNids []*string `json:"noSquashNids,omitempty"`
 	RootSquash   *string   `json:"rootSquash,omitempty"`
+}
+
+// The configuration for a data repository association that links an Amazon
+// File Cache resource to an NFS data repository.
+type NFSDataRepositoryConfiguration struct {
+	// Describes a data repository association's automatic export policy. The AutoExportPolicy
+	// defines the types of updated objects on the file system that will be automatically
+	// exported to the data repository. As you create, modify, or delete files,
+	// Amazon FSx for Lustre automatically exports the defined changes asynchronously
+	// once your application finishes modifying the file.
+	//
+	// The AutoExportPolicy is only supported on Amazon FSx for Lustre file systems
+	// with a data repository association.
+	AutoExportPolicy *AutoExportPolicy `json:"autoExportPolicy,omitempty"`
 }
 
 // Configuration for the FSx for NetApp ONTAP file system.
@@ -1157,6 +1220,36 @@ type S3AccessPointVPCConfiguration struct {
 	// and subnets (https://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_Subnets.html)
 	// in the Amazon VPC User Guide.
 	VPCID *string `json:"vpcID,omitempty"`
+}
+
+// The configuration for an Amazon S3 data repository linked to an Amazon FSx
+// for Lustre file system with a data repository association. The configuration
+// consists of an AutoImportPolicy that defines which file events on the data
+// repository are automatically imported to the file system and an AutoExportPolicy
+// that defines which file events on the file system are automatically exported
+// to the data repository. File events are when files or directories are added,
+// changed, or deleted on the file system or the data repository.
+//
+// Data repository associations on Amazon File Cache don't use S3DataRepositoryConfiguration
+// because they don't support automatic import or automatic export.
+type S3DataRepositoryConfiguration struct {
+	// Describes a data repository association's automatic export policy. The AutoExportPolicy
+	// defines the types of updated objects on the file system that will be automatically
+	// exported to the data repository. As you create, modify, or delete files,
+	// Amazon FSx for Lustre automatically exports the defined changes asynchronously
+	// once your application finishes modifying the file.
+	//
+	// The AutoExportPolicy is only supported on Amazon FSx for Lustre file systems
+	// with a data repository association.
+	AutoExportPolicy *AutoExportPolicy `json:"autoExportPolicy,omitempty"`
+	// Describes the data repository association's automatic import policy. The
+	// AutoImportPolicy defines how Amazon FSx keeps your file metadata and directory
+	// listings up to date by importing changes to your Amazon FSx for Lustre file
+	// system as you modify objects in a linked S3 bucket.
+	//
+	// The AutoImportPolicy is only supported on Amazon FSx for Lustre file systems
+	// with a data repository association.
+	AutoImportPolicy *AutoImportPolicy `json:"autoImportPolicy,omitempty"`
 }
 
 // The configuration of the self-managed Microsoft Active Directory (AD) directory

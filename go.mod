@@ -1,11 +1,11 @@
 module github.com/aws-controllers-k8s/fsx-controller
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/aws-controllers-k8s/ec2-controller v1.21.0
 	github.com/aws-controllers-k8s/kms-controller v1.5.0
-	github.com/aws-controllers-k8s/runtime v0.67.0
+	github.com/aws-controllers-k8s/runtime v0.68.0
 	github.com/aws/aws-sdk-go-v2 v1.45.1
 	github.com/aws/aws-sdk-go-v2/service/fsx v1.72.0
 	github.com/aws/smithy-go v1.28.1
@@ -75,12 +75,12 @@ require (
 	go.uber.org/zap v1.27.1 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/net v0.57.0 // indirect
+	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/term v0.45.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/term v0.47.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect

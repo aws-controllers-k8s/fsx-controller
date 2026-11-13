@@ -43,6 +43,7 @@ import (
 	svctypes "github.com/aws-controllers-k8s/fsx-controller/apis/v1alpha1"
 	svcresource "github.com/aws-controllers-k8s/fsx-controller/pkg/resource"
 
+	_ "github.com/aws-controllers-k8s/fsx-controller/pkg/resource/data_repository_association"
 	_ "github.com/aws-controllers-k8s/fsx-controller/pkg/resource/file_system"
 
 	"github.com/aws-controllers-k8s/fsx-controller/pkg/version"

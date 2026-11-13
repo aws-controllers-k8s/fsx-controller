@@ -15,6 +15,7 @@
 import logging
 
 from acktest.bootstrapping import Resources, BootstrapFailureException
+from acktest.bootstrapping.s3 import Bucket
 from acktest.bootstrapping.vpc import VPC
 
 from e2e import bootstrap_directory
@@ -36,6 +37,12 @@ def service_bootstrap() -> Resources:
             # (InvalidNetworkSettings). A self-referencing all-protocols rule is
             # what the FSx docs recommend.
             security_group_self_referencing_ingress=True,
+        ),
+        # Same Region as the file system, as CreateDataRepositoryAssociation
+        # requires. Bucket.cleanup empties it before deletion, which also
+        # removes anything the DRA exported.
+        DataRepositoryBucket=Bucket(
+            name_prefix="ack-fsx-dra",
         ),
     )
 

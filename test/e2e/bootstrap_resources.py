@@ -17,6 +17,7 @@ for them.
 
 from dataclasses import dataclass
 from acktest.bootstrapping import Resources
+from acktest.bootstrapping.s3 import Bucket
 from acktest.bootstrapping.vpc import VPC
 from e2e import bootstrap_directory
 
@@ -24,6 +25,8 @@ from e2e import bootstrap_directory
 class BootstrapResources(Resources):
     # All FSx tests share one VPC with a private subnet and security group.
     FSxVPC: VPC
+    # Data repository for the DataRepositoryAssociation tests.
+    DataRepositoryBucket: Bucket
 
 _bootstrap_resources = None
 

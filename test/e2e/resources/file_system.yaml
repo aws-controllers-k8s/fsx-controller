@@ -23,3 +23,5 @@ spec:
   tags:
     - key: $TAG_KEY
       value: $TAG_VALUE
+    - key: $SECOND_TAG_KEY
+      value: $SECOND_TAG_VALUE

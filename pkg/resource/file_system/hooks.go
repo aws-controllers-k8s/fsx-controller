@@ -1244,8 +1244,7 @@ func setFileSystemStatus(
 }
 
 // syncTags brings the file system's AWS tags in line with Spec.Tags using the
-// FSx TagResource/UntagResource operations. FSx has no bulk "replace tags"
-// call, so removals and additions are issued separately.
+// FSx TagResource/UntagResource operations (see util.SyncTags).
 func (rm *resourceManager) syncTags(
 	ctx context.Context,
 	desired *resource,
@@ -1255,58 +1254,11 @@ func (rm *resourceManager) syncTags(
 	exit := rlog.Trace("rm.syncTags")
 	defer func() { exit(err) }()
 
-	// ResourceARN carries `is_arn: true` in generator.yaml, so sdkFind/sdkCreate
-	// populate Status.ACKResourceMetadata.ARN and `latest` (which always comes
-	// from a read) has it. The guard is purely defensive.
-	arn := (*string)(nil)
-	if latest.ko.Status.ACKResourceMetadata != nil && latest.ko.Status.ACKResourceMetadata.ARN != nil {
-		arn = aws.String(string(*latest.ko.Status.ACKResourceMetadata.ARN))
-	}
-	if arn == nil {
-		return fmt.Errorf("cannot sync tags: resource ARN is not yet known")
-	}
-
-	desiredTags, _ := convertToOrderedACKTags(desired.ko.Spec.Tags)
-	latestTags, _ := convertToOrderedACKTags(latest.ko.Spec.Tags)
-
-	var toRemove []string
-	for k := range latestTags {
-		if _, found := desiredTags[k]; !found {
-			toRemove = append(toRemove, k)
-		}
-	}
-
-	var toAdd []svcsdktypes.Tag
-	for k, v := range desiredTags {
-		if latestValue, found := latestTags[k]; !found || latestValue != v {
-			toAdd = append(toAdd, svcsdktypes.Tag{
-				Key:   aws.String(k),
-				Value: aws.String(v),
-			})
-		}
-	}
-
-	if len(toRemove) > 0 {
-		_, err = rm.sdkapi.UntagResource(ctx, &svcsdk.UntagResourceInput{
-			ResourceARN: arn,
-			TagKeys:     toRemove,
-		})
-		rm.metrics.RecordAPICall("UPDATE", "UntagResource", err)
-		if err != nil {
-			return err
-		}
-	}
-	if len(toAdd) > 0 {
-		_, err = rm.sdkapi.TagResource(ctx, &svcsdk.TagResourceInput{
-			ResourceARN: arn,
-			Tags:        toAdd,
-		})
-		rm.metrics.RecordAPICall("UPDATE", "TagResource", err)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return util.SyncTags(
+		ctx, desired.ko.Spec.Tags, latest.ko.Spec.Tags,
+		latest.ko.Status.ACKResourceMetadata, convertToOrderedACKTags,
+		rm.sdkapi, rm.metrics,
+	)
 }
 
 // customUpdateFileSystem replaces the generated sdkUpdate, which does not

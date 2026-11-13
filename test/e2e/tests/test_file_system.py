@@ -22,6 +22,7 @@ import time
 
 import pytest
 
+from acktest import tags
 from acktest.k8s import condition
 from acktest.k8s import resource as k8s
 from acktest.resources import random_suffix_name
@@ -41,6 +42,10 @@ UPDATED_MAINTENANCE_WINDOW = "4:05:30"
 INITIAL_TAG_KEY = "ack-fsx-e2e"
 INITIAL_TAG_VALUE = "initial"
 UPDATED_TAG_VALUE = "updated"
+SECOND_TAG_KEY = "ack-fsx-e2e-second"
+SECOND_TAG_VALUE = "second"
+NEW_TAG_KEY = "ack-fsx-e2e-new"
+NEW_TAG_VALUE = "new"
 
 # An FSx for Lustre file system typically reaches AVAILABLE in 5-10 minutes and
 # disappears from DescribeFileSystems 5-10 minutes after being deleted.
@@ -72,6 +77,8 @@ def lustre_file_system(fsx_client):
     replacements["WEEKLY_MAINTENANCE_START_TIME"] = INITIAL_MAINTENANCE_WINDOW
     replacements["TAG_KEY"] = INITIAL_TAG_KEY
     replacements["TAG_VALUE"] = INITIAL_TAG_VALUE
+    replacements["SECOND_TAG_KEY"] = SECOND_TAG_KEY
+    replacements["SECOND_TAG_VALUE"] = SECOND_TAG_VALUE
 
     resource_data = load_fsx_resource(
         "file_system",
@@ -163,7 +170,20 @@ class TestFileSystem:
             fs["LustreConfiguration"]["WeeklyMaintenanceStartTime"]
             == INITIAL_MAINTENANCE_WINDOW
         )
-        assert validator.get_tags(file_system_id)[INITIAL_TAG_KEY] == INITIAL_TAG_VALUE
+        expected_tags = {
+            INITIAL_TAG_KEY: INITIAL_TAG_VALUE,
+            SECOND_TAG_KEY: SECOND_TAG_VALUE,
+        }
+        aws_tags = validator.get_tags(file_system_id)
+        tags.assert_ack_system_tags(tags=aws_tags)
+        tags.assert_equal_without_ack_tags(
+            expected=expected_tags, actual=aws_tags,
+        )
+        # FilterSystemTags must keep the ACK system tags out of spec.tags.
+        tags.assert_equal(
+            expected=expected_tags, actual=cr["spec"]["tags"],
+            key_member_name="key", value_member_name="value",
+        )
 
     def test_update_maintenance_window(self, fsx_client, lustre_file_system):
         """Exercises customUpdateFileSystem: a nested Spec.LustreConfiguration
@@ -205,14 +225,21 @@ class TestFileSystem:
 
     def test_update_tags(self, fsx_client, lustre_file_system):
         """Exercises syncTags, which uses TagResource/UntagResource rather than
-        UpdateFileSystem.
+        UpdateFileSystem. The step changes INITIAL_TAG_KEY's value, removes
+        SECOND_TAG_KEY and adds NEW_TAG_KEY, so both TagResource and
+        UntagResource run, and the ACK system tags must survive the removal.
         """
         (ref, _, file_system_id) = lustre_file_system
 
+        expected_tags = {
+            INITIAL_TAG_KEY: UPDATED_TAG_VALUE,
+            NEW_TAG_KEY: NEW_TAG_VALUE,
+        }
         updates = {
             "spec": {
                 "tags": [
                     {"key": INITIAL_TAG_KEY, "value": UPDATED_TAG_VALUE},
+                    {"key": NEW_TAG_KEY, "value": NEW_TAG_VALUE},
                 ],
             },
         }
@@ -222,9 +249,7 @@ class TestFileSystem:
         # Also covers Status.ACKResourceMetadata.ARN being populated -- without
         # it syncTags cannot call TagResource at all.
         validator = FSxValidator(fsx_client)
-        assert validator.wait_until_tag(
-            file_system_id, INITIAL_TAG_KEY, UPDATED_TAG_VALUE,
-        )
+        assert validator.wait_until_tags(file_system_id, expected_tags)
 
         assert k8s.wait_on_condition(
             ref,
@@ -234,7 +259,16 @@ class TestFileSystem:
             period_length=MODIFY_CONDITION_PERIOD_LENGTH,
         )
 
+        # Verify via the AWS API.
+        aws_tags = validator.get_tags(file_system_id)
+        tags.assert_ack_system_tags(tags=aws_tags)
+        tags.assert_equal_without_ack_tags(
+            expected=expected_tags, actual=aws_tags,
+        )
+
         # Verify via the CR.
         cr = k8s.get_resource(ref)
-        cr_tags = {t["key"]: t["value"] for t in cr["spec"]["tags"]}
-        assert cr_tags[INITIAL_TAG_KEY] == UPDATED_TAG_VALUE
+        tags.assert_equal(
+            expected=expected_tags, actual=cr["spec"]["tags"],
+            key_member_name="key", value_member_name="value",
+        )

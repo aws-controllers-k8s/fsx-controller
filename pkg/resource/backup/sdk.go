@@ -633,7 +633,7 @@ func (rm *resourceManager) sdkFind(
 			ko.Status.Type = nil
 		}
 		if elem.Volume != nil {
-			f16 := &svcapitypes.Volume{}
+			f16 := &svcapitypes.Volume_SDK{}
 			if elem.Volume.CreationTime != nil {
 				f16.CreationTime = &metav1.Time{*elem.Volume.CreationTime}
 			}
@@ -1527,7 +1527,7 @@ func (rm *resourceManager) sdkCreate(
 		ko.Status.Type = nil
 	}
 	if resp.Backup.Volume != nil {
-		f16 := &svcapitypes.Volume{}
+		f16 := &svcapitypes.Volume_SDK{}
 		if resp.Backup.Volume.CreationTime != nil {
 			f16.CreationTime = &metav1.Time{*resp.Backup.Volume.CreationTime}
 		}

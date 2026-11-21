@@ -1,0 +1,13 @@
+apiVersion: fsx.services.k8s.aws/v1alpha1
+kind: Volume
+metadata:
+  name: $ADOPTED_VOLUME_CR_NAME
+  annotations:
+    services.k8s.aws/adoption-policy: adopt
+    services.k8s.aws/adoption-fields: '{"id": "$VOLUME_ID"}'
+    services.k8s.aws/deletion-policy: retain
+# name and type are required by the CRD schema; the rest is filled in from
+# DescribeVolumes.
+spec:
+  type: $VOLUME_TYPE
+  name: $VOLUME_NAME

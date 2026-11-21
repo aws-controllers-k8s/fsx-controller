@@ -49,7 +49,7 @@ type AdministrativeAction struct {
 	// A description of a specific Amazon FSx file system.
 	TargetFileSystemValues *FileSystem_SDK `json:"targetFileSystemValues,omitempty"`
 	// Describes an Amazon FSx volume.
-	TargetVolumeValues *Volume `json:"targetVolumeValues,omitempty"`
+	TargetVolumeValues *Volume_SDK `json:"targetVolumeValues,omitempty"`
 }
 
 // Provides information about a failed administrative action.
@@ -185,7 +185,7 @@ type Backup_SDK struct {
 	// The type of the backup.
 	Type *string `json:"type_,omitempty"`
 	// Describes an Amazon FSx volume.
-	Volume *Volume `json:"volume,omitempty"`
+	Volume *Volume_SDK `json:"volume,omitempty"`
 }
 
 // Provides a report detailing the data repository task results of the files
@@ -201,7 +201,10 @@ type CompletionReport struct {
 // Used to specify the configuration options for an FSx for ONTAP volume's storage
 // aggregate or aggregates.
 type CreateAggregateConfiguration struct {
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
 	Aggregates []*string `json:"aggregates,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
+	ConstituentsPerAggregate *int64 `json:"constituentsPerAggregate,omitempty"`
 }
 
 // Specifies the FSx for ONTAP volume that the S3 access point will be attached
@@ -478,14 +481,24 @@ type CreateFileSystemWindowsConfiguration struct {
 
 // Specifies the configuration of the ONTAP volume that you are creating.
 type CreateOntapVolumeConfiguration struct {
-	CopyTagsToBackups        *bool   `json:"copyTagsToBackups,omitempty"`
-	JunctionPath             *string `json:"junctionPath,omitempty"`
-	SecurityStyle            *string `json:"securityStyle,omitempty"`
-	SizeInBytes              *int64  `json:"sizeInBytes,omitempty"`
-	SizeInMegabytes          *int64  `json:"sizeInMegabytes,omitempty"`
-	SnapshotPolicy           *string `json:"snapshotPolicy,omitempty"`
-	StorageEfficiencyEnabled *bool   `json:"storageEfficiencyEnabled,omitempty"`
-	StorageVirtualMachineID  *string `json:"storageVirtualMachineID,omitempty"`
+	// Used to specify the configuration options for an FSx for ONTAP volume's storage
+	// aggregate or aggregates.
+	AggregateConfiguration *CreateAggregateConfiguration `json:"aggregateConfiguration,omitempty"`
+	CopyTagsToBackups      *bool                         `json:"copyTagsToBackups,omitempty"`
+	JunctionPath           *string                       `json:"junctionPath,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
+	OntapVolumeType *string `json:"type,omitempty"`
+	SecurityStyle   *string `json:"securityStyle,omitempty"`
+	SizeInBytes     *int64  `json:"sizeInBytes,omitempty"`
+	// Defines the SnapLock configuration when creating an FSx for ONTAP SnapLock
+	// volume.
+	SnaplockConfiguration    *CreateSnaplockConfiguration `json:"snaplockConfiguration,omitempty"`
+	SnapshotPolicy           *string                      `json:"snapshotPolicy,omitempty"`
+	StorageEfficiencyEnabled *bool                        `json:"storageEfficiencyEnabled,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
+	StorageVirtualMachineID *string `json:"storageVirtualMachineID,omitempty"`
+	// Reference field for StorageVirtualMachineID
+	StorageVirtualMachineRef *ackv1alpha1.AWSResourceReferenceWrapper `json:"storageVirtualMachineRef,omitempty"`
 	// Describes the data tiering policy for an ONTAP volume. When enabled, Amazon
 	// FSx for ONTAP's intelligent tiering automatically transitions a volume's
 	// data between the file system's primary storage and capacity pool storage
@@ -505,7 +518,8 @@ type CreateOntapVolumeConfiguration struct {
 	//    * NONE - keeps a volume's data in the primary storage tier, preventing
 	//    it from being moved to the capacity pool tier.
 	TieringPolicy *TieringPolicy `json:"tieringPolicy,omitempty"`
-	VolumeStyle   *string        `json:"volumeStyle,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
+	VolumeStyle *string `json:"style,omitempty"`
 }
 
 // The snapshot configuration to use when creating an Amazon FSx for OpenZFS
@@ -523,13 +537,23 @@ type CreateOpenZFSOriginSnapshotConfiguration struct {
 // Specifies the configuration of the Amazon FSx for OpenZFS volume that you
 // are creating.
 type CreateOpenZFSVolumeConfiguration struct {
-	CopyTagsToSnapshots *bool                      `json:"copyTagsToSnapshots,omitempty"`
-	DataCompressionType *string                    `json:"dataCompressionType,omitempty"`
-	NfsExports          []*OpenZFSNfsExport        `json:"nfsExports,omitempty"`
-	ParentVolumeID      *string                    `json:"parentVolumeID,omitempty"`
-	ReadOnly            *bool                      `json:"readOnly,omitempty"`
-	RecordSizeKiB       *int64                     `json:"recordSizeKiB,omitempty"`
-	UserAndGroupQuotas  []*OpenZFSUserOrGroupQuota `json:"userAndGroupQuotas,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
+	CopyTagsToSnapshots *bool               `json:"copyTagsToSnapshots,omitempty"`
+	DataCompressionType *string             `json:"dataCompressionType,omitempty"`
+	NfsExports          []*OpenZFSNfsExport `json:"nfsExports,omitempty"`
+	// The snapshot configuration to use when creating an Amazon FSx for OpenZFS
+	// volume from a snapshot.
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
+	OriginSnapshot *CreateOpenZFSOriginSnapshotConfiguration `json:"originSnapshot,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
+	ParentVolumeID *string `json:"parentVolumeID,omitempty"`
+	// Reference field for ParentVolumeID
+	ParentVolumeRef               *ackv1alpha1.AWSResourceReferenceWrapper `json:"parentVolumeRef,omitempty"`
+	ReadOnly                      *bool                                    `json:"readOnly,omitempty"`
+	RecordSizeKiB                 *int64                                   `json:"recordSizeKiB,omitempty"`
+	StorageCapacityQuotaGiB       *int64                                   `json:"storageCapacityQuotaGiB,omitempty"`
+	StorageCapacityReservationGiB *int64                                   `json:"storageCapacityReservationGiB,omitempty"`
+	UserAndGroupQuotas            []*OpenZFSUserOrGroupQuota               `json:"userAndGroupQuotas,omitempty"`
 }
 
 // Defines the SnapLock configuration when creating an FSx for ONTAP SnapLock
@@ -546,9 +570,10 @@ type CreateSnaplockConfiguration struct {
 	// The configuration to set the retention period of an FSx for ONTAP SnapLock
 	// volume. The retention period includes default, maximum, and minimum settings.
 	// For more information, see Working with the retention period in SnapLock (https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/snaplock-retention.html).
-	RetentionPeriod         *SnaplockRetentionPeriod `json:"retentionPeriod,omitempty"`
-	SnaplockType            *string                  `json:"snaplockType,omitempty"`
-	VolumeAppendModeEnabled *bool                    `json:"volumeAppendModeEnabled,omitempty"`
+	RetentionPeriod *SnaplockRetentionPeriod `json:"retentionPeriod,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
+	SnaplockType            *string `json:"snaplockType,omitempty"`
+	VolumeAppendModeEnabled *bool   `json:"volumeAppendModeEnabled,omitempty"`
 }
 
 // The configuration that Amazon FSx uses to join the ONTAP storage virtual
@@ -1818,13 +1843,14 @@ type UpdateFileSystemWindowsConfiguration struct {
 // Used to specify changes to the ONTAP configuration for the volume you are
 // updating.
 type UpdateOntapVolumeConfiguration struct {
-	CopyTagsToBackups        *bool   `json:"copyTagsToBackups,omitempty"`
-	JunctionPath             *string `json:"junctionPath,omitempty"`
-	SecurityStyle            *string `json:"securityStyle,omitempty"`
-	SizeInBytes              *int64  `json:"sizeInBytes,omitempty"`
-	SizeInMegabytes          *int64  `json:"sizeInMegabytes,omitempty"`
-	SnapshotPolicy           *string `json:"snapshotPolicy,omitempty"`
-	StorageEfficiencyEnabled *bool   `json:"storageEfficiencyEnabled,omitempty"`
+	CopyTagsToBackups *bool   `json:"copyTagsToBackups,omitempty"`
+	JunctionPath      *string `json:"junctionPath,omitempty"`
+	SecurityStyle     *string `json:"securityStyle,omitempty"`
+	SizeInBytes       *int64  `json:"sizeInBytes,omitempty"`
+	// Updates the SnapLock configuration for an existing FSx for ONTAP volume.
+	SnaplockConfiguration    *UpdateSnaplockConfiguration `json:"snaplockConfiguration,omitempty"`
+	SnapshotPolicy           *string                      `json:"snapshotPolicy,omitempty"`
+	StorageEfficiencyEnabled *bool                        `json:"storageEfficiencyEnabled,omitempty"`
 	// Describes the data tiering policy for an ONTAP volume. When enabled, Amazon
 	// FSx for ONTAP's intelligent tiering automatically transitions a volume's
 	// data between the file system's primary storage and capacity pool storage
@@ -1849,11 +1875,13 @@ type UpdateOntapVolumeConfiguration struct {
 // Used to specify changes to the OpenZFS configuration for the volume that
 // you are updating.
 type UpdateOpenZFSVolumeConfiguration struct {
-	DataCompressionType *string                    `json:"dataCompressionType,omitempty"`
-	NfsExports          []*OpenZFSNfsExport        `json:"nfsExports,omitempty"`
-	ReadOnly            *bool                      `json:"readOnly,omitempty"`
-	RecordSizeKiB       *int64                     `json:"recordSizeKiB,omitempty"`
-	UserAndGroupQuotas  []*OpenZFSUserOrGroupQuota `json:"userAndGroupQuotas,omitempty"`
+	DataCompressionType           *string                    `json:"dataCompressionType,omitempty"`
+	NfsExports                    []*OpenZFSNfsExport        `json:"nfsExports,omitempty"`
+	ReadOnly                      *bool                      `json:"readOnly,omitempty"`
+	RecordSizeKiB                 *int64                     `json:"recordSizeKiB,omitempty"`
+	StorageCapacityQuotaGiB       *int64                     `json:"storageCapacityQuotaGiB,omitempty"`
+	StorageCapacityReservationGiB *int64                     `json:"storageCapacityReservationGiB,omitempty"`
+	UserAndGroupQuotas            []*OpenZFSUserOrGroupQuota `json:"userAndGroupQuotas,omitempty"`
 }
 
 // Updates the SnapLock configuration for an existing FSx for ONTAP volume.
@@ -1884,8 +1912,16 @@ type UpdateSvmActiveDirectoryConfiguration struct {
 	SelfManagedActiveDirectoryConfiguration *SelfManagedActiveDirectoryConfigurationUpdates `json:"selfManagedActiveDirectoryConfiguration,omitempty"`
 }
 
+// A filter used to restrict the results of describe calls for Amazon FSx for
+// NetApp ONTAP or Amazon FSx for OpenZFS volumes. You can use multiple filters
+// to return results that meet all applied filter requirements.
+type VolumeFilter struct {
+	Name   *string   `json:"name,omitempty"`
+	Values []*string `json:"values,omitempty"`
+}
+
 // Describes an Amazon FSx volume.
-type Volume struct {
+type Volume_SDK struct {
 	// The time that the resource was created, in seconds (since 1970-01-01T00:00:00Z),
 	// also known as Unix time.
 	CreationTime *metav1.Time `json:"creationTime,omitempty"`

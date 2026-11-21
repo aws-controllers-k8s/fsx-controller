@@ -1,0 +1,12 @@
+apiVersion: fsx.services.k8s.aws/v1alpha1
+kind: Volume
+metadata:
+  name: $VOLUME_CR_NAME
+spec:
+  type: OPENZFS
+  name: $VOLUME_NAME
+  # Exercises the same-kind reference: the parent is another Volume CR.
+  openZFSConfiguration:
+    parentVolumeRef:
+      from:
+        name: $PARENT_VOLUME_CR_NAME

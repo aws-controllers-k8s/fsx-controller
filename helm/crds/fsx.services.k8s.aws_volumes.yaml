@@ -1,0 +1,496 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: volumes.fsx.services.k8s.aws
+spec:
+  group: fsx.services.k8s.aws
+  names:
+    kind: Volume
+    listKind: VolumeList
+    plural: volumes
+    singular: volume
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.id
+      name: ID
+      type: string
+    - jsonPath: .spec.type
+      name: TYPE
+      type: string
+    - jsonPath: .spec.name
+      name: NAME
+      type: string
+    - jsonPath: .status.fileSystemID
+      name: FILESYSTEM
+      priority: 1
+      type: string
+    - jsonPath: .status.lifecycle
+      name: STATE
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="ACK.ResourceSynced")].status
+      name: Synced
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Volume is the Schema for the Volumes API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              VolumeSpec defines the desired state of Volume.
+
+              Describes an Amazon FSx volume.
+            properties:
+              name:
+                description: |-
+                  Specifies the name of the volume that you're creating.
+
+                  Regex Pattern: `^[^\u0000\u0085\u2028\u2029\r\n]{1,203}$`
+                type: string
+              ontapConfiguration:
+                description: Specifies the configuration to use when creating the
+                  ONTAP volume.
+                properties:
+                  aggregateConfiguration:
+                    description: |-
+                      Used to specify the configuration options for an FSx for ONTAP volume's storage
+                      aggregate or aggregates.
+                    properties:
+                      aggregates:
+                        items:
+                          type: string
+                        type: array
+                        x-kubernetes-validations:
+                        - message: Value is immutable once set
+                          rule: self == oldSelf
+                      constituentsPerAggregate:
+                        format: int64
+                        type: integer
+                        x-kubernetes-validations:
+                        - message: Value is immutable once set
+                          rule: self == oldSelf
+                    type: object
+                  copyTagsToBackups:
+                    type: boolean
+                  junctionPath:
+                    type: string
+                  securityStyle:
+                    type: string
+                  sizeInBytes:
+                    format: int64
+                    type: integer
+                  snaplockConfiguration:
+                    description: |-
+                      Defines the SnapLock configuration when creating an FSx for ONTAP SnapLock
+                      volume.
+                    properties:
+                      auditLogVolume:
+                        type: boolean
+                      autocommitPeriod:
+                        description: |-
+                          Sets the autocommit period of files in an FSx for ONTAP SnapLock volume,
+                          which determines how long the files must remain unmodified before they're
+                          automatically transitioned to the write once, read many (WORM) state.
+
+                          For more information, see Autocommit (https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/worm-state.html#worm-state-autocommit).
+                        properties:
+                          type:
+                            type: string
+                          value:
+                            format: int64
+                            type: integer
+                        type: object
+                      privilegedDelete:
+                        type: string
+                      retentionPeriod:
+                        description: |-
+                          The configuration to set the retention period of an FSx for ONTAP SnapLock
+                          volume. The retention period includes default, maximum, and minimum settings.
+                          For more information, see Working with the retention period in SnapLock (https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/snaplock-retention.html).
+                        properties:
+                          defaultRetention:
+                            description: |-
+                              Specifies the retention period of an FSx for ONTAP SnapLock volume. After
+                              it is set, it can't be changed. Files can't be deleted or modified during
+                              the retention period.
+
+                              For more information, see Working with the retention period in SnapLock (https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/snaplock-retention.html).
+                            properties:
+                              type:
+                                type: string
+                              value:
+                                format: int64
+                                type: integer
+                            type: object
+                          maximumRetention:
+                            description: |-
+                              Specifies the retention period of an FSx for ONTAP SnapLock volume. After
+                              it is set, it can't be changed. Files can't be deleted or modified during
+                              the retention period.
+
+                              For more information, see Working with the retention period in SnapLock (https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/snaplock-retention.html).
+                            properties:
+                              type:
+                                type: string
+                              value:
+                                format: int64
+                                type: integer
+                            type: object
+                          minimumRetention:
+                            description: |-
+                              Specifies the retention period of an FSx for ONTAP SnapLock volume. After
+                              it is set, it can't be changed. Files can't be deleted or modified during
+                              the retention period.
+
+                              For more information, see Working with the retention period in SnapLock (https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/snaplock-retention.html).
+                            properties:
+                              type:
+                                type: string
+                              value:
+                                format: int64
+                                type: integer
+                            type: object
+                        type: object
+                      snaplockType:
+                        type: string
+                        x-kubernetes-validations:
+                        - message: Value is immutable once set
+                          rule: self == oldSelf
+                      volumeAppendModeEnabled:
+                        type: boolean
+                    type: object
+                  snapshotPolicy:
+                    type: string
+                  storageEfficiencyEnabled:
+                    type: boolean
+                  storageVirtualMachineID:
+                    type: string
+                    x-kubernetes-validations:
+                    - message: Value is immutable once set
+                      rule: self == oldSelf
+                  storageVirtualMachineRef:
+                    description: Reference field for StorageVirtualMachineID
+                    properties:
+                      from:
+                        description: |-
+                          AWSResourceReference provides all the values necessary to reference another
+                          k8s resource for finding the identifier(Id/ARN/Name)
+                        properties:
+                          name:
+                            type: string
+                          namespace:
+                            type: string
+                        type: object
+                    type: object
+                  style:
+                    type: string
+                    x-kubernetes-validations:
+                    - message: Value is immutable once set
+                      rule: self == oldSelf
+                  tieringPolicy:
+                    description: |-
+                      Describes the data tiering policy for an ONTAP volume. When enabled, Amazon
+                      FSx for ONTAP's intelligent tiering automatically transitions a volume's
+                      data between the file system's primary storage and capacity pool storage
+                      based on your access patterns.
+
+                      Valid tiering policies are the following:
+
+                         * SNAPSHOT_ONLY - (Default value) moves cold snapshots to the capacity
+                         pool storage tier.
+
+                         * AUTO - moves cold user data and snapshots to the capacity pool storage
+                         tier based on your access patterns.
+
+                         * ALL - moves all user data blocks in both the active file system and
+                         Snapshot copies to the storage pool tier.
+
+                         * NONE - keeps a volume's data in the primary storage tier, preventing
+                         it from being moved to the capacity pool tier.
+                    properties:
+                      coolingPeriod:
+                        format: int64
+                        type: integer
+                      name:
+                        type: string
+                    type: object
+                  type:
+                    type: string
+                    x-kubernetes-validations:
+                    - message: Value is immutable once set
+                      rule: self == oldSelf
+                type: object
+              openZFSConfiguration:
+                description: Specifies the configuration to use when creating the
+                  OpenZFS volume.
+                properties:
+                  copyTagsToSnapshots:
+                    type: boolean
+                    x-kubernetes-validations:
+                    - message: Value is immutable once set
+                      rule: self == oldSelf
+                  dataCompressionType:
+                    type: string
+                  nfsExports:
+                    items:
+                      description: |-
+                        The Network File System (NFS) configurations for mounting an Amazon FSx for
+                        OpenZFS file system.
+                      properties:
+                        clientConfigurations:
+                          items:
+                            description: |-
+                              Specifies who can mount an OpenZFS file system and the options available
+                              while mounting the file system.
+                            properties:
+                              clients:
+                                type: string
+                              options:
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          type: array
+                      type: object
+                    type: array
+                  originSnapshot:
+                    description: |-
+                      The snapshot configuration to use when creating an Amazon FSx for OpenZFS
+                      volume from a snapshot.
+                    properties:
+                      copyStrategy:
+                        type: string
+                      snapshotARN:
+                        description: |-
+                          The Amazon Resource Name (ARN) for a given resource. ARNs uniquely identify
+                          Amazon Web Services resources. We require an ARN when you need to specify
+                          a resource unambiguously across all of Amazon Web Services. For more information,
+                          see Amazon Resource Names (ARNs) (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+                          in the Amazon Web Services General Reference.
+                        type: string
+                    type: object
+                    x-kubernetes-validations:
+                    - message: Value is immutable once set
+                      rule: self == oldSelf
+                  parentVolumeID:
+                    type: string
+                    x-kubernetes-validations:
+                    - message: Value is immutable once set
+                      rule: self == oldSelf
+                  parentVolumeRef:
+                    description: Reference field for ParentVolumeID
+                    properties:
+                      from:
+                        description: |-
+                          AWSResourceReference provides all the values necessary to reference another
+                          k8s resource for finding the identifier(Id/ARN/Name)
+                        properties:
+                          name:
+                            type: string
+                          namespace:
+                            type: string
+                        type: object
+                    type: object
+                  readOnly:
+                    type: boolean
+                  recordSizeKiB:
+                    format: int64
+                    type: integer
+                  storageCapacityQuotaGiB:
+                    format: int64
+                    type: integer
+                  storageCapacityReservationGiB:
+                    format: int64
+                    type: integer
+                  userAndGroupQuotas:
+                    items:
+                      description: |-
+                        Used to configure quotas that define how much storage a user or group can
+                        use on an FSx for OpenZFS volume. For more information, see Volume properties
+                        (https://docs.aws.amazon.com/fsx/latest/OpenZFSGuide/managing-volumes.html#volume-properties)
+                        in the FSx for OpenZFS User Guide.
+                      properties:
+                        id:
+                          format: int64
+                          type: integer
+                        storageCapacityQuotaGiB:
+                          format: int64
+                          type: integer
+                        type_:
+                          type: string
+                      type: object
+                    type: array
+                type: object
+              tags:
+                items:
+                  description: Specifies a key-value pair for a resource tag.
+                  properties:
+                    key:
+                      description: |-
+                        A string of 1 to 128 characters that specifies the key for a tag. Tag keys
+                        must be unique for the resource to which they are attached.
+                      type: string
+                    value:
+                      description: |-
+                        A string of 0 to 256 characters that specifies the value for a tag. Tag values
+                        can be null and don't have to be unique in a tag set.
+                      type: string
+                  type: object
+                type: array
+              type:
+                description: |-
+                  Specifies the type of volume to create; ONTAP and OPENZFS are the only valid
+                  volume types.
+                type: string
+                x-kubernetes-validations:
+                - message: Value is immutable once set
+                  rule: self == oldSelf
+            required:
+            - name
+            - type
+            type: object
+          status:
+            description: VolumeStatus defines the observed state of Volume
+            properties:
+              ackResourceMetadata:
+                description: |-
+                  All CRs managed by ACK have a common `Status.ACKResourceMetadata` member
+                  that is used to contain resource sync state, account ownership,
+                  constructed ARN for the resource
+                properties:
+                  arn:
+                    description: |-
+                      ARN is the Amazon Resource Name for the resource. This is a
+                      globally-unique identifier and is set only by the ACK service controller
+                      once the controller has orchestrated the creation of the resource OR
+                      when it has verified that an "adopted" resource (a resource where the
+                      ARN annotation was set by the Kubernetes user on the CR) exists and
+                      matches the supplied CR's Spec field values.
+                      https://github.com/aws/aws-controllers-k8s/issues/270
+                    type: string
+                  ownerAccountID:
+                    description: |-
+                      OwnerAccountID is the AWS Account ID of the account that owns the
+                      backend AWS service API resource.
+                    type: string
+                  partition:
+                    description: Partition is the AWS partition in which the resource
+                      exists or will exist
+                    type: string
+                  region:
+                    description: Region is the AWS region in which the resource exists
+                      or will exist.
+                    type: string
+                required:
+                - ownerAccountID
+                - region
+                type: object
+              conditions:
+                description: |-
+                  All CRs managed by ACK have a common `Status.Conditions` member that
+                  contains a collection of `ackv1alpha1.Condition` objects that describe
+                  the various terminal states of the CR and its backend AWS service API
+                  resource
+                items:
+                  description: |-
+                    Condition is the common struct used by all CRDs managed by ACK service
+                    controllers to indicate terminal states  of the CR and its backend AWS
+                    service API resource
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: A human readable message indicating details about
+                        the transition.
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current state of the instance.
+                      format: int64
+                      type: integer
+                    reason:
+                      description: The reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type is the type of the Condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              creationTime:
+                format: date-time
+                type: string
+              fileSystemID:
+                description: 'Regex Pattern: `^(fs-[0-9a-f]{8,})$`'
+                type: string
+              id:
+                description: |-
+                  The system-generated, unique ID of the volume.
+
+                  Regex Pattern: `^(fsvol-[0-9a-f]{17,})$`
+                type: string
+              lifecycle:
+                description: |-
+                  The lifecycle status of the volume.
+
+                     * AVAILABLE - The volume is fully available for use.
+
+                     * CREATED - The volume has been created.
+
+                     * CREATING - Amazon FSx is creating the new volume.
+
+                     * DELETING - Amazon FSx is deleting an existing volume.
+
+                     * FAILED - Amazon FSx was unable to create the volume.
+
+                     * MISCONFIGURED - The volume is in a failed but recoverable state.
+
+                     * PENDING - Amazon FSx hasn't started creating the volume.
+                type: string
+              lifecycleTransitionReason:
+                description: The reason why the volume lifecycle status changed.
+                properties:
+                  message:
+                    description: A detailed error message.
+                    type: string
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

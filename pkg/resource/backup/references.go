@@ -42,6 +42,10 @@ func (rm *resourceManager) ClearResolvedReferences(res acktypes.AWSResource) ack
 		ko.Spec.FileSystemID = nil
 	}
 
+	if ko.Spec.VolumeRef != nil {
+		ko.Spec.VolumeID = nil
+	}
+
 	return &resource{ko}
 }
 
@@ -67,6 +71,12 @@ func (rm *resourceManager) ResolveReferences(
 		resourceHasReferences = resourceHasReferences || fieldHasReferences
 	}
 
+	if fieldHasReferences, err := rm.resolveReferenceForVolumeID(ctx, apiReader, ko); err != nil {
+		return &resource{ko}, (resourceHasReferences || fieldHasReferences), err
+	} else {
+		resourceHasReferences = resourceHasReferences || fieldHasReferences
+	}
+
 	return &resource{ko}, resourceHasReferences, err
 }
 
@@ -76,6 +86,10 @@ func validateReferenceFields(ko *svcapitypes.Backup) error {
 
 	if ko.Spec.FileSystemRef != nil && ko.Spec.FileSystemID != nil {
 		return ackerr.ResourceReferenceAndIDNotSupportedFor("FileSystemID", "FileSystemRef")
+	}
+
+	if ko.Spec.VolumeRef != nil && ko.Spec.VolumeID != nil {
+		return ackerr.ResourceReferenceAndIDNotSupportedFor("VolumeID", "VolumeRef")
 	}
 	return nil
 }
@@ -162,6 +176,94 @@ func getReferencedResourceState_FileSystem(
 	if obj.Status.ID == nil {
 		return ackerr.ResourceReferenceMissingTargetFieldFor(
 			"FileSystem",
+			namespace, name,
+			"Status.ID")
+	}
+	return nil
+}
+
+// resolveReferenceForVolumeID reads the resource referenced
+// from VolumeRef field and sets the VolumeID
+// from referenced resource. Returns a boolean indicating whether a reference
+// contains references, or an error
+func (rm *resourceManager) resolveReferenceForVolumeID(
+	ctx context.Context,
+	apiReader client.Reader,
+	ko *svcapitypes.Backup,
+) (hasReferences bool, err error) {
+	if ko.Spec.VolumeRef != nil && ko.Spec.VolumeRef.From != nil {
+		hasReferences = true
+		arr := ko.Spec.VolumeRef.From
+		if arr.Name == nil || *arr.Name == "" {
+			return hasReferences, fmt.Errorf("provided resource reference is nil or empty: VolumeRef")
+		}
+		namespace, _, err := ackrt.ValidateCrossNamespaceReference(
+			rm.cfg.EnableCrossNamespace,
+			ko.ObjectMeta.GetNamespace(),
+			arr.Namespace,
+			*arr.Name,
+		)
+		if err != nil {
+			return hasReferences, err
+		}
+		obj := &svcapitypes.Volume{}
+		if err := getReferencedResourceState_Volume(ctx, apiReader, obj, *arr.Name, namespace); err != nil {
+			return hasReferences, err
+		}
+		ko.Spec.VolumeID = (*string)(obj.Status.ID)
+	}
+
+	return hasReferences, nil
+}
+
+// getReferencedResourceState_Volume looks up whether a referenced resource
+// exists and is in a ACK.ResourceSynced=True state. If the referenced resource does exist and is
+// in a Synced state, returns nil, otherwise returns `ackerr.ResourceReferenceTerminalFor` or
+// `ResourceReferenceNotSyncedFor` depending on if the resource is in a Terminal state.
+func getReferencedResourceState_Volume(
+	ctx context.Context,
+	apiReader client.Reader,
+	obj *svcapitypes.Volume,
+	name string, // the Kubernetes name of the referenced resource
+	namespace string, // the Kubernetes namespace of the referenced resource
+) error {
+	namespacedName := types.NamespacedName{
+		Namespace: namespace,
+		Name:      name,
+	}
+	err := apiReader.Get(ctx, namespacedName, obj)
+	if err != nil {
+		return err
+	}
+	var refResourceTerminal bool
+	for _, cond := range obj.Status.Conditions {
+		if cond.Type == ackv1alpha1.ConditionTypeTerminal &&
+			cond.Status == corev1.ConditionTrue {
+			return ackerr.ResourceReferenceTerminalFor(
+				"Volume",
+				namespace, name)
+		}
+	}
+	if refResourceTerminal {
+		return ackerr.ResourceReferenceTerminalFor(
+			"Volume",
+			namespace, name)
+	}
+	var refResourceSynced bool
+	for _, cond := range obj.Status.Conditions {
+		if cond.Type == ackv1alpha1.ConditionTypeResourceSynced &&
+			cond.Status == corev1.ConditionTrue {
+			refResourceSynced = true
+		}
+	}
+	if !refResourceSynced {
+		return ackerr.ResourceReferenceNotSyncedFor(
+			"Volume",
+			namespace, name)
+	}
+	if obj.Status.ID == nil {
+		return ackerr.ResourceReferenceMissingTargetFieldFor(
+			"Volume",
 			namespace, name,
 			"Status.ID")
 	}

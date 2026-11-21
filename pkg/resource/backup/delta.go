@@ -64,6 +64,9 @@ func newResourceDelta(
 			delta.Add("Spec.VolumeID", a.ko.Spec.VolumeID, b.ko.Spec.VolumeID)
 		}
 	}
+	if !equality.Semantic.Equalities.DeepEqual(a.ko.Spec.VolumeRef, b.ko.Spec.VolumeRef) {
+		delta.Add("Spec.VolumeRef", a.ko.Spec.VolumeRef, b.ko.Spec.VolumeRef)
+	}
 
 	return delta
 }

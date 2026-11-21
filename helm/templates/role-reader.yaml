@@ -20,6 +20,7 @@ rules:
   - datarepositoryassociations
   - filesystems
   - storagevirtualmachines
+  - volumes
   verbs:
   - get
   - list

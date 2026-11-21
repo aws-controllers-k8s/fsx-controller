@@ -1,0 +1,21 @@
+apiVersion: fsx.services.k8s.aws/v1alpha1
+kind: FileSystem
+metadata:
+  name: $FILE_SYSTEM_NAME
+  annotations:
+    # Cleanup: no final backup, and remove any child volume a failed test
+    # left behind.
+    fsx.services.k8s.aws/skip-final-backup: "true"
+    fsx.services.k8s.aws/openzfs-delete-options: DELETE_CHILD_VOLUMES_AND_SNAPSHOTS
+spec:
+  type: OPENZFS
+  # SINGLE_AZ_1 minimum.
+  storageCapacity: 64
+  storageType: SSD
+  subnetIDs:
+    - $PRIVATE_SUBNET_ID
+  securityGroupIDs:
+    - $SECURITY_GROUP_ID
+  openZFSConfiguration:
+    deploymentType: SINGLE_AZ_1
+    throughputCapacity: 64

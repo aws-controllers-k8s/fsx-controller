@@ -154,6 +154,7 @@ reconcile:
     - DataRepositoryAssociation
     - FileSystem
     - StorageVirtualMachine
+    - Volume
 
 serviceAccount:
   # Specifies whether a service account should be created

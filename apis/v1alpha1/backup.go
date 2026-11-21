@@ -43,7 +43,8 @@ type BackupSpec struct {
 	//
 	// Regex Pattern: `^(fsvol-[0-9a-f]{17,})$`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
-	VolumeID *string `json:"volumeID,omitempty"`
+	VolumeID  *string                                  `json:"volumeID,omitempty"`
+	VolumeRef *ackv1alpha1.AWSResourceReferenceWrapper `json:"volumeRef,omitempty"`
 }
 
 // BackupStatus defines the observed state of Backup
@@ -128,7 +129,7 @@ type BackupStatus struct {
 	// +kubebuilder:validation:Optional
 	Type *string `json:"type,omitempty"`
 	// +kubebuilder:validation:Optional
-	Volume *Volume `json:"volume,omitempty"`
+	Volume *Volume_SDK `json:"volume,omitempty"`
 }
 
 // Backup is the Schema for the Backups API

@@ -48,6 +48,7 @@ import (
 	_ "github.com/aws-controllers-k8s/fsx-controller/pkg/resource/data_repository_association"
 	_ "github.com/aws-controllers-k8s/fsx-controller/pkg/resource/file_system"
 	_ "github.com/aws-controllers-k8s/fsx-controller/pkg/resource/storage_virtual_machine"
+	_ "github.com/aws-controllers-k8s/fsx-controller/pkg/resource/volume"
 
 	"github.com/aws-controllers-k8s/fsx-controller/pkg/version"
 )

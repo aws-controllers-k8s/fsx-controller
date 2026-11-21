@@ -1,0 +1,14 @@
+apiVersion: fsx.services.k8s.aws/v1alpha1
+kind: Volume
+metadata:
+  name: $VOLUME_CR_NAME
+spec:
+  type: OPENZFS
+  name: $VOLUME_NAME
+  # Minimal on purpose (see volume_ontap.yaml). The parent is the file
+  # system's root volume, which is not a CR, so its ID is set directly.
+  openZFSConfiguration:
+    parentVolumeID: $PARENT_VOLUME_ID
+  tags:
+    - key: $TAG_KEY
+      value: $TAG_VALUE

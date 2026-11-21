@@ -394,3 +394,41 @@ class StorageVirtualMachineValidator(FSxResourceValidator):
             if not token:
                 return tags
             kwargs["NextToken"] = token
+
+
+# Not-found codes VolumeValidator maps to None.
+VOLUME_NOT_FOUND_ERROR_CODES = frozenset(("VolumeNotFound",))
+
+
+class VolumeValidator(FSxResourceValidator):
+    def __init__(self, fsx_client):
+        super().__init__(
+            fsx_client,
+            describe=lambda i: fsx_client.describe_volumes(
+                VolumeIds=[i],
+            ).get("Volumes", []),
+            not_found_error_codes=VOLUME_NOT_FOUND_ERROR_CODES,
+            label="volume",
+            gone_wait_periods=40,
+            gone_period_length=15,
+        )
+
+    def list_tags(self, resource_id: str) -> Dict[str, str]:
+        """Tags from ListTagsForResource. DescribeVolumes does not report
+        volume tags (as with SVMs), so the controller reads them the same
+        way."""
+        item = self.get(resource_id)
+        if item is None:
+            return {}
+        tags = {}
+        kwargs = {"ResourceARN": item["ResourceARN"]}
+        while True:
+            resp = self.fsx_client.list_tags_for_resource(**kwargs)
+            tags.update({t["Key"]: t["Value"] for t in resp.get("Tags", [])})
+            token = resp.get("NextToken")
+            if not token:
+                return tags
+            kwargs["NextToken"] = token
+
+    # Describe has no volume tags; never compare against it.
+    get_tags = list_tags

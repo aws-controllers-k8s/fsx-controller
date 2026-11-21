@@ -1,0 +1,29 @@
+apiVersion: fsx.services.k8s.aws/v1alpha1
+kind: Volume
+metadata:
+  name: $VOLUME_CR_NAME
+  annotations:
+    # Cleanup: skip the final backup FSx would otherwise take (an unmanaged
+    # Backup that outlives the test).
+    fsx.services.k8s.aws/skip-final-backup: "true"
+spec:
+  type: ONTAP
+  name: $VOLUME_NAME
+  # Minimal on purpose: every server-defaulted member (securityStyle,
+  # snapshotPolicy, tieringPolicy, type, style, aggregates, ...) is left out so
+  # the test checks that late-init converges with no idle UpdateVolume.
+  ontapConfiguration:
+    storageVirtualMachineRef:
+      from:
+        name: $SVM_CR_NAME
+    # FSx rejects a CreateVolume for an RW ONTAP volume without a
+    # JunctionPath (BadRequest: Missing required parameter in
+    # OntapConfiguration: "JunctionPath"), although the SDK marks it optional.
+    junctionPath: /$VOLUME_NAME
+    sizeInBytes: $SIZE_IN_BYTES
+    storageEfficiencyEnabled: true
+  tags:
+    - key: $TAG_KEY
+      value: $TAG_VALUE
+    - key: $SECOND_TAG_KEY
+      value: $SECOND_TAG_VALUE

@@ -88,6 +88,7 @@ rules:
   - datarepositoryassociations
   - filesystems
   - storagevirtualmachines
+  - volumes
   verbs:
   - create
   - delete
@@ -103,6 +104,7 @@ rules:
   - datarepositoryassociations/status
   - filesystems/status
   - storagevirtualmachines/status
+  - volumes/status
   verbs:
   - get
   - patch

@@ -5,7 +5,6 @@ ignore:
       - FileCache
       - FileSystemFromBackup
       - Snapshot
-      - Volume
       - VolumeFromBackup
   field_paths:
       # AdministrativeAction.TargetFileSystemValues is itself a FileSystem, so
@@ -28,6 +27,18 @@ ignore:
       - DeleteFileSystemInput.LustreConfiguration
       - DeleteFileSystemInput.OpenZFSConfiguration
       - DeleteFileSystemInput.WindowsConfiguration
+      # Same for DeleteVolume (SkipFinalBackup, BypassSnaplockEnterpriseRetention,
+      # FinalBackupTags, OpenZFS Options): delete-time options read from
+      # annotations by setDeleteVolumeConfiguration.
+      - DeleteVolumeInput.OntapConfiguration
+      - DeleteVolumeInput.OpenZFSConfiguration
+      # Deprecated in favour of SizeInBytes. Describe reports both, so keeping
+      # it would leave a nil-vs-value delta (or, late-initialized, a value
+      # that conflicts with later SizeInBytes edits). Dropped from the input
+      # shapes only: OntapVolumeConfiguration.SizeInMegabytes stays, since it
+      # is part of Backup's released status.volume.
+      - CreateOntapVolumeConfiguration.SizeInMegabytes
+      - UpdateOntapVolumeConfiguration.SizeInMegabytes
       # Populated only for Amazon File Cache associations. This resource
       # manages FSx for Lustre associations only: CreateDataRepositoryAssociation
       # has no cache input, so these can never be set by this controller.
@@ -107,9 +118,11 @@ resources:
         references:
           resource: FileSystem
           path: Status.ID
-      # No reference yet: Volume is not an ACK resource in this controller.
       VolumeId:
         is_immutable: true
+        references:
+          resource: Volume
+          path: Status.ID
     print:
       add_age_column: true
       add_synced_column: true
@@ -669,6 +682,281 @@ resources:
           json_path: .spec.name
           type: string
           index: 20
+        - name: STATE
+          json_path: .status.lifecycle
+          type: string
+          index: 30
+  Volume:
+    # ClientRequestToken is an SDK idempotency token the middleware auto-fills.
+    ignore_idempotency_token: true
+    # UpdateVolume's Name is documented for OpenZFS volumes only; sending it
+    # unchanged on every ONTAP update would risk an unrelated rejection. Only
+    # top-level members are omitted: a changed OntapConfiguration still
+    # carries all of its members.
+    update_operation:
+      omit_unchanged_fields: true
+    # Drop the Volume prefix that stutters on a Volume kind. DescribeVolumes'
+    # VolumeIds input needs no rename: it matches the <Resource>Ids lookup, so
+    # the generated list request filters by Status.ID (Backup precedent).
+    renames:
+      operations:
+        CreateVolume:
+          input_fields:
+            VolumeType: Type
+          output_fields:
+            VolumeId: ID
+            VolumeType: Type
+        DescribeVolumes:
+          output_fields:
+            VolumeId: ID
+            VolumeType: Type
+        UpdateVolume:
+          input_fields:
+            VolumeId: ID
+          output_fields:
+            VolumeId: ID
+            VolumeType: Type
+        DeleteVolume:
+          input_fields:
+            VolumeId: ID
+    hooks:
+      # Syncs tags (UpdateVolume has no Tags member) and skips the update call
+      # on tags-only changes.
+      sdk_update_pre_build_request:
+        template_path: hooks/volume/sdk_update_pre_build_request.go.tpl
+      # The generated setters replace Spec.OntapConfiguration wholesale from
+      # the output shape, which has no ConstituentsPerAggregate; keep the
+      # declared value. Also keeps CoolingPeriod unset when the user left it
+      # unset (a default FSx applies only to some tiering policies).
+      sdk_create_post_set_output:
+        template_path: hooks/volume/sdk_create_post_set_output.go.tpl
+      # FSx reorders the OpenZFS client configurations and quota entries and
+      # always reports the root (Id 0, quota 0) quotas; treat those as equal.
+      delta_pre_compare:
+        template_path: hooks/volume/delta_pre_compare.go.tpl
+      # Same restore after Describe, reads tags via ListTagsForResource, and
+      # makes FAILED Terminal.
+      sdk_read_many_post_set_output:
+        template_path: hooks/volume/sdk_read_many_post_set_output.go.tpl
+      # Delete-time options come from annotations (skip-final-backup,
+      # bypass-snaplock-enterprise-retention, openzfs-delete-options); absent
+      # annotations send nothing so FSx's defaults apply. FinalBackupTags is
+      # not supported yet: a tag list does not fit one annotation well.
+      sdk_delete_post_build_request:
+        template_path: hooks/volume/sdk_delete_post_build_request.go.tpl
+      # Delete is async: record DELETING and hold the finalizer until Describe
+      # reports VolumeNotFound.
+      sdk_delete_post_request:
+        template_path: hooks/volume/sdk_delete_post_request.go.tpl
+    # Tags are inline on CreateVolume; updates go through
+    # TagResource/UntagResource. DescribeVolumes does not report tags despite
+    # the model (e2e), so the read hook fetches them with ListTagsForResource
+    # (rm.getTags), as for StorageVirtualMachine.
+    tags:
+      ignore: false
+    # ONTAP volumes settle in CREATED, OpenZFS volumes in AVAILABLE; CREATING
+    # and PENDING requeue. MISCONFIGURED is documented as recoverable and stays
+    # retryable; FAILED is made Terminal by the read hook.
+    synced:
+      when:
+        - path: Status.Lifecycle
+          in: [ "CREATED", "AVAILABLE" ]
+    # Skip a redundant DeleteVolume while one is in flight. Every other state
+    # is allowed so a requested delete is never blocked. This is an allow-list
+    # of every VolumeLifecycle value in the SDK model except DELETING; a
+    # lifecycle value FSx adds later would requeue the delete until the list
+    # is updated and the controller is regenerated.
+    deletable:
+      when:
+        - path: Status.Lifecycle
+          in: [ "AVAILABLE", "CREATED", "CREATING", "PENDING", "FAILED", "MISCONFIGURED" ]
+    # UpdateVolume is rejected while the volume is CREATING (e2e: "BadRequest:
+    # Volume ... cannot be updated because it is being created", retried
+    # 250+ times in a tight backoff right after create, when Describe does
+    # not yet report UserAndGroupQuotas). Only CREATING is held back, the one
+    # state with evidence; like `deletable`, this lists every other
+    # VolumeLifecycle value in the SDK model.
+    updateable:
+      when:
+        - path: Status.Lifecycle
+          in: [ "AVAILABLE", "CREATED", "PENDING", "FAILED", "MISCONFIGURED", "DELETING" ]
+    # Only codes fixable by editing this Spec belong here. MissingVolumeConfiguration
+    # is cleared by adding the ontapConfiguration/openZFSConfiguration block
+    # that matches spec.type. Deliberately excluded: BadRequest (the
+    # catch-all, also used for duplicate names); UnsupportedOperation (fixed
+    # only through the immutable SVM/parent or the parent file system's type);
+    # StorageVirtualMachineNotFound and FileSystemNotFound (transient right
+    # after the parent is created, and the IDs are immutable);
+    # ServiceLimitExceeded (external); IncompatibleParameterError (an
+    # idempotency-token clash the SDK clears next reconcile).
+    exceptions:
+      errors:
+        404:
+          code: VolumeNotFound
+      terminal_codes:
+        - MissingVolumeConfiguration
+    fields:
+      # Only `ARN`/`VolumeARN` are auto-detected; syncTags reads the ARN from
+      # Status.ACKResourceMetadata.ARN.
+      ResourceARN:
+        is_arn: true
+      # Absent from UpdateVolumeInput. Without go_tag the Go-keyword escape
+      # would serialize this as `type_`.
+      Type:
+        is_immutable: true
+        go_tag: json:"type,omitempty"
+      # The Update response is not authoritative for tags (synced through
+      # TagResource/UntagResource); keep desired's. `ignore: true` rather than
+      # "all": UpdateVolumeInput has no Tags member to skip.
+      Tags:
+        set:
+          - method: Update
+            ignore: true
+      # UpdateVolume is asynchronous and its response reports the volume as
+      # it was before the update (e2e: after an ONTAP SizeInBytes and
+      # SnapshotPolicy change, and an OpenZFS quota/compression/NFS/quota-list
+      # change, the response still had the old values). Setting the Spec from
+      # it patched the old values back onto the CR, reverting the user's edit.
+      # Keep desired's; the next Describe reports the applied state, so drift
+      # stays visible. `ignore: true` rather than "all": the request must still
+      # be built from these members.
+      Name:
+        set:
+          - method: Update
+            ignore: true
+      OntapConfiguration:
+        set:
+          - method: Update
+            ignore: true
+      OpenZFSConfiguration:
+        set:
+          - method: Update
+            ignore: true
+      # Create-only members: absent from UpdateOntapVolumeConfiguration /
+      # UpdateOpenZFSVolumeConfiguration (and UpdateSnaplockConfiguration).
+      # Without is_immutable an edit would be silently dropped.
+      # Known gap (community#3097): the CEL rule is skipped when the old value
+      # is absent and cannot see ...Ref changes; Describe still reports the
+      # actual values (except ConstituentsPerAggregate, which is restored from
+      # desired), so the delta remains visible.
+      OntapConfiguration.StorageVirtualMachineId:
+        is_immutable: true
+        references:
+          resource: StorageVirtualMachine
+          path: Status.ID
+      # Immutable per member, not on the AggregateConfiguration struct:
+      # Aggregates is late-initialized, and a struct-level `self == oldSelf`
+      # rule would reject that write when the user declared only
+      # ConstituentsPerAggregate. A member-level rule is skipped when the old
+      # value is absent.
+      OntapConfiguration.AggregateConfiguration.ConstituentsPerAggregate:
+        is_immutable: true
+      # Stutters with both the parent and the kind. Defaults to RW;
+      # late-initialized like the server-defaulted members below.
+      OntapConfiguration.OntapVolumeType:
+        is_immutable: true
+        go_tag: json:"type,omitempty"
+        late_initialize:
+          skip_incomplete_check: {}
+      # Stutters with the kind. Defaults to FLEXVOL; late-initialized.
+      OntapConfiguration.VolumeStyle:
+        is_immutable: true
+        go_tag: json:"style,omitempty"
+        late_initialize:
+          skip_incomplete_check: {}
+      OntapConfiguration.SnaplockConfiguration.SnaplockType:
+        is_immutable: true
+      # Keyword escape for the shared SnapLock shapes (same as Backup).
+      # OpenZFSUserOrGroupQuota.Type stays `type_`: it is shared with the
+      # released FileSystem CRD.
+      OntapConfiguration.SnaplockConfiguration.AutocommitPeriod.Type:
+        go_tag: json:"type,omitempty"
+      OntapConfiguration.SnaplockConfiguration.RetentionPeriod.DefaultRetention.Type:
+        go_tag: json:"type,omitempty"
+      # Resolves only when the parent is a Volume CR. The file system's root
+      # volume is not a CR, so a child of the root sets the ID directly.
+      OpenZFSConfiguration.ParentVolumeId:
+        is_immutable: true
+        references:
+          resource: Volume
+          path: Status.ID
+      # Defaults to false; late-initialized.
+      OpenZFSConfiguration.CopyTagsToSnapshots:
+        is_immutable: true
+        late_initialize:
+          skip_incomplete_check: {}
+      OpenZFSConfiguration.OriginSnapshot:
+        is_immutable: true
+      # Server-defaulted members: FSx fills these in when they are left out.
+      # The generated Create setter already copies the whole configuration
+      # block from the response into the Spec; late_initialize
+      # covers a default that only a later Describe reports, so it does not
+      # leave a nil-vs-value delta (and an UpdateVolume). Nested members are
+      # only filled when their parent struct (TieringPolicy,
+      # AggregateConfiguration) is in the Spec. The list comes from the
+      # documented defaults and has not yet been checked against Describe for
+      # a minimal live volume; test_volume.py asserts each one and that no
+      # idle UpdateVolume is sent. skip_incomplete_check keeps a member
+      # Describe does not report from requeueing forever.
+      # Deliberately not late-initialized: TieringPolicy.CoolingPeriod (its
+      # default applies only to AUTO/SNAPSHOT_ONLY, so the read hook drops it
+      # when undeclared), StorageVirtualMachineId and ParentVolumeId (with a
+      # ...Ref set, a late-initialized ID would make reference resolution fail),
+      # and SizeInBytes/JunctionPath (no documented default).
+      OntapConfiguration.SecurityStyle:
+        late_initialize:
+          skip_incomplete_check: {}
+      OntapConfiguration.SnapshotPolicy:
+        late_initialize:
+          skip_incomplete_check: {}
+      OntapConfiguration.TieringPolicy.Name:
+        late_initialize:
+          skip_incomplete_check: {}
+      OntapConfiguration.CopyTagsToBackups:
+        late_initialize:
+          skip_incomplete_check: {}
+      OntapConfiguration.AggregateConfiguration.Aggregates:
+        is_immutable: true
+        late_initialize:
+          skip_incomplete_check: {}
+      OpenZFSConfiguration.DataCompressionType:
+        late_initialize:
+          skip_incomplete_check: {}
+      OpenZFSConfiguration.RecordSizeKiB:
+        late_initialize:
+          skip_incomplete_check: {}
+      OpenZFSConfiguration.ReadOnly:
+        late_initialize:
+          skip_incomplete_check: {}
+      # -1 (no quota/reservation) is accepted back by UpdateVolume.
+      OpenZFSConfiguration.StorageCapacityQuotaGiB:
+        late_initialize:
+          skip_incomplete_check: {}
+      OpenZFSConfiguration.StorageCapacityReservationGiB:
+        late_initialize:
+          skip_incomplete_check: {}
+    print:
+      add_age_column: true
+      add_synced_column: true
+      order_by: index
+      additional_columns:
+        - name: ID
+          json_path: .status.id
+          type: string
+          index: 10
+        - name: TYPE
+          json_path: .spec.type
+          type: string
+          index: 15
+        - name: NAME
+          json_path: .spec.name
+          type: string
+          index: 20
+        - name: FILESYSTEM
+          json_path: .status.fileSystemID
+          type: string
+          index: 25
+          priority: 1
         - name: STATE
           json_path: .status.lifecycle
           type: string
